@@ -350,14 +350,14 @@ const GLBV={0:{def:'35',common:{wx:.28,ws:.8,wep:HW0,gun:1},opt:{
  // wk = cached weapon mesh of the built-in hero (old heroes 'hw'+i, new heroes 'nw'+i), reused on the Meshy model's weapon arm
  // melee heroes hold their weapon in the hand bone: grip = point on the weapon mesh that sits in the palm, hl/hr = forearm bend while holding, wk2 = weapon in the right hand
  1:{def:'35',common:{wx:.2,ws:.8,wk:'hw1',grip:[0,-.25,.3],hl:[-.7,0,0],palm:.08,pose:wokPose},opt:{'35':{n:'3.5 head',walk:'art/models/web/wok35b-walk.json',run:'art/models/web/wok35b-run.json',h:2.1}}},
- 8:{def:'35',common:{wx:.2,ws:.42,wk:'nw8',grip:[0,-.22,.1],hl:[-.8,0,0],palm:.08},opt:{'35':{n:'3.5 head',walk:'art/models/web/shadow35-walk.json',run:'art/models/web/shadow35-run.json',h:2.15}}},
+ 8:{def:'35',common:{wx:.2,ws:1,wk:'nw8',grip:[0,0,0],hl:[-.8,0,0],palm:.08,wglb:'art/models/web/shadow-staff.json',wh:1.5,wgx:.24,wgy:.37,wlx:.675,wly:.66},opt:{'35':{n:'3.5 head',walk:'art/models/web/shadow35-walk.json',run:'art/models/web/shadow35-run.json',h:2.15}}},
  9:{def:'35',common:{wx:.2,ws:.6,wk:'nw9',grip:[0,-.25,.12],hl:[-.9,0,0],wk2:'nw9',hr:[-.9,0,0],palm:.08,pose:fanPose},opt:{'35':{n:'3.5 head',walk:'art/models/web/fan35-walk.json',run:'art/models/web/fan35-run.json',h:2.15}}}},GLBH={},GLBL=[];
 function glbUse(i,k){let V=GLBV[i];if(!V.opt[k])k=V.def;V.sel=k;try{localStorage.setItem('phluGLB'+i,k)}catch(e){}GLBH[i]=Object.assign(V.opt[k],V.common);glbLoad(i)}
 const OLS=new THREE.MeshBasicMaterial({color:0x080a18,side:THREE.BackSide,skinning:true});OLS.onBeforeCompile=s=>{s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed+=normalize(normal)*.013;')};
 function glbClip(c,name){let t=c.tracks.filter(k=>k.name.endsWith('.quaternion')||k.name=='Hips.position').map(k=>{if(k.name!='Hips.position')return k;k=k.clone();let v=k.values;for(let j=0;j<v.length;j+=3){v[j]=v[0];v[j+2]=v[2]}return k});return new THREE.AnimationClip(name,c.duration,t)}
 function glbPose(c,t){return new THREE.AnimationClip('idle',1,c.tracks.map(k=>{let v=k.createInterpolant().evaluate(t);return new k.constructor(k.name,[0],Array.from(v))}))}
 function glbLoad(i){let d=GLBH[i];if(!d||d.ok||d.busy||!THREE.GLTFLoader||!THREE.SkeletonUtils||location.protocol=='file:')return;d.busy=1;let L=new THREE.GLTFLoader(),get=u=>new Promise((ok,no)=>L.load(u,ok,undefined,no));
- {Promise.all([get(d.walk),get(d.run)]).then(([w,r])=>{d.src=w.scene;if(d.flipFeet)glbFlipFeet(d.src);d.walkC=glbClip(w.animations[0],'walk');d.runC=glbClip(r.animations[0],'run');
+ {Promise.all([get(d.walk),get(d.run),d.wglb?get(d.wglb).catch(()=>null):null]).then(([w,r,wg])=>{d.src=w.scene;if(wg)d.wsrc=wPrep(wg.scene,d);if(d.flipFeet)glbFlipFeet(d.src);d.walkC=glbClip(w.animations[0],'walk');d.runC=glbClip(r.animations[0],'run');
   let m=THREE.SkeletonUtils.clone(d.src),mx=new THREE.AnimationMixer(m),a=mx.clipAction(d.walkC).play(),bo={};m.traverse(o=>{if(o.isBone)bo[o.name]=o});let best=0,bd=1e9,v=new THREE.Vector3(),u=new THREE.Vector3();
   for(let t=0;t<d.walkC.duration;t+=.02){a.time=t;mx.update(0);m.updateMatrixWorld(true);let q=Math.abs(bo.LeftFoot.getWorldPosition(v).z-bo.RightFoot.getWorldPosition(u).z);if(q<bd){bd=q;best=t}}
   d.idleC=glbPose(d.walkC,best);m.traverse(o=>{if(o.isSkinnedMesh&&!d.mat){let s=o.material;if(s.map)s.map.encoding=THREE.LinearEncoding;d.mat=rim(LMAT({map:s.map||null,color:s.map?0xffffff:s.color,gradientMap:gm,skinning:true}))}});
@@ -371,6 +371,13 @@ function glbFlipFeet(src){src.updateMatrixWorld(true);src.traverse(o=>{if(!o.isS
    P0.setX(v,2*A.x-P0.getX(v));P0.setZ(v,2*A.z-P0.getZ(v));if(N){N.setX(v,-N.getX(v));N.setZ(v,-N.getZ(v))}SI.setXYZW(v,f,0,0,0);SW.setXYZW(v,1,0,0,0);n++}
   console.info('flipped '+n+' '+s+' shoe vertices')}
  P0.needsUpdate=SI.needsUpdate=SW.needsUpdate=true;if(N)N.needsUpdate=true;G.computeBoundingBox();G.computeBoundingSphere()})}
+// a Meshy prop weapon: scaled to d.wh, moved so the grip point sits at the origin, with a soft glow on the lantern
+let WGLOW=null;
+function wPrep(s,d){let b=new THREE.Box3().setFromObject(s),W=b.max.x-b.min.x,H=b.max.y-b.min.y,k=d.wh/H,gx=b.min.x+W*d.wgx,gy=b.min.y+H*d.wgy,gz=(b.min.z+b.max.z)/2,g=new THREE.Group();
+ s.scale.setScalar(k);s.position.set(-gx*k,-gy*k,-gz*k);g.add(s);s.traverse(o=>{if(o.isMesh){o.castShadow=true;if(o.material&&o.material.map)o.material.map.encoding=THREE.LinearEncoding}});
+ if(!WGLOW){let c=document.createElement('canvas');c.width=c.height=64;let x=c.getContext('2d'),r=x.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'rgba(190,225,255,1)');r.addColorStop(.35,'rgba(110,170,255,.55)');r.addColorStop(1,'rgba(80,120,255,0)');x.fillStyle=r;x.fillRect(0,0,64,64);WGLOW=new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true})}
+ let lx=(b.min.x+W*d.wlx-gx)*k,ly=(b.min.y+H*d.wly-gy)*k,halo=new THREE.Sprite(WGLOW);halo.scale.setScalar(.55);halo.position.set(lx,ly,0);halo.renderOrder=2;g.add(halo);
+ let core=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),new THREE.MeshBasicMaterial({color:0xcfe6ff}));core.position.set(lx,ly-.02,0);g.add(core);return g}
 function glbHero(i){let d=GLBH[i],g=grp(),b=grp(g),m=THREE.SkeletonUtils.clone(d.src),bo={},sk=[],O=()=>new THREE.Object3D();g.userData.b=b;m.scale.setScalar(d.h/1.7);b.add(m);
  m.traverse(o=>{if(o.isBone)bo[o.name]=o;if(o.isSkinnedMesh)sk.push(o)});
  for(let o of sk){o.material=d.mat;o.castShadow=true;o.frustumCulled=false;let q=new THREE.SkinnedMesh(o.geometry,OLS);q.bind(o.skeleton,o.bindMatrix);q.frustumCulled=false;o.parent.add(q)}
@@ -390,7 +397,7 @@ function glbGrip(g,m,bo,d,wk){let tmp={m,base:new Map()},ws=d.ws||1;for(let[n,eu
   // the hand bone sits at the wrist; palm moves the grip toward the middle of the palm along the forearm direction
   if(d.palm){let fp=bo[hn.replace('Hand','ForeArm')].getWorldPosition(new THREE.Vector3());hp.add(hp.clone().sub(fp).normalize().multiplyScalar(d.palm))}let gp=new THREE.Vector3(...d.grip).multiplyScalar(ws);
   let want=new THREE.Matrix4().compose(hp.sub(gp),new THREE.Quaternion(),new THREE.Vector3(ws,ws,ws));hb.matrixWorld.clone().invert().multiply(want).decompose(h.position,h.quaternion,h.scale);
-  h.userData.root=g;hb.add(h);sm(h,key,()=>[],.036)}
+  h.userData.root=g;hb.add(h);if(d.wsrc&&key==wk)h.add(d.wsrc.clone());else sm(h,key,()=>[],.036)}
  for(let[bn,q]of tmp.base)bn.quaternion.copy(q);m.updateMatrixWorld(true)}
 // FAN's dance poses replace the shared melee swing on her arms (body twist and spin still come from the shared attack code).
 // Arm angles are bends on the hanging idle arm in body space: x<0 raises forward, z>0 swings the left arm out (the right arm mirrors z).

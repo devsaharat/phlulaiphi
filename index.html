@@ -391,7 +391,7 @@ function glbHero(i){let d=GLBH[i],g=grp(),b=grp(g),m=THREE.SkeletonUtils.clone(d
  m.traverse(o=>{if(o.isBone)bo[o.name]=o;if(o.isSkinnedMesh)sk.push(o)});
  for(let o of sk){o.material=d.mat;o.castShadow=true;o.frustumCulled=false;let q=new THREE.SkinnedMesh(o.geometry,OLS);q.bind(o.skeleton,o.bindMatrix);q.frustumCulled=false;o.parent.add(q)}
  let mx=new THREE.AnimationMixer(m),A={idle:mx.clipAction(d.idleC),walk:mx.clipAction(d.walkC),run:mx.clipAction(d.runC)};for(let k in A)A[k].play().setEffectiveWeight(k=='idle'?1:0);mx.update(0);m.updateMatrixWorld(true);
- let rest={},rest2={};var restL={};for(let n of['LeftArm','LeftForeArm','LeftHand'])rest[n]=bo[n].quaternion.clone();for(let n of['LeftArm','LeftForeArm','RightArm','RightForeArm'])rest2[n]=bo[n].quaternion.clone();for(let n of["LeftUpLeg","LeftLeg","RightUpLeg","RightLeg"])restL[n]=bo[n].quaternion.clone();
+ let rest={},rest2={};var restL={};for(let n of d.wr?['RightArm','RightForeArm','RightHand']:['LeftArm','LeftForeArm','LeftHand'])rest[n]=bo[n].quaternion.clone();for(let n of['LeftArm','LeftForeArm','RightArm','RightForeArm'])rest2[n]=bo[n].quaternion.clone();for(let n of["LeftUpLeg","LeftLeg","RightUpLeg","RightLeg"])restL[n]=bo[n].quaternion.clone();
  let w2b=n=>b.worldToLocal(bo[n].getWorldPosition(new THREE.Vector3())),sh=w2b('LeftArm');
  let arm=grp(g);b.add(arm);arm.position.set(sh.x+d.wx,sh.y,sh.z);let wk=d.wk||'hw'+i;if(!d.wep&&!GEO[wk])(i>2?newHero:oldHero)(i);let tip=new THREE.Object3D(),wm=null;
  if(d.grip)glbGrip(g,m,bo,d,wk);else{wm=sm(arm,wk,d.wep||(()=>[]),.036);wm.scale.setScalar(d.ws||1);tip.position.set(0,-.22,1.9);wm.add(tip)}
@@ -484,7 +484,7 @@ function glbTick(dt){for(let j=GLBL.length-1;j>=0;j--){let e=GLBL[j],g=e.g;if(g.
  e.A.idle.setEffectiveWeight(idle);e.A.walk.setEffectiveWeight(mv-rn);e.A.run.setEffectiveWeight(rn);e.A.walk.timeScale=clamp(e.sp/3,.7,1.1);e.A.run.timeScale=clamp(e.sp/8.5,.65,1);
  for(let[bn,q]of e.base)bn.quaternion.copy(q);e.base.clear();e.mx.update(dt);
  if(e.d.gun)glbGun(e,u,dt,g===P.g?P.act:null);
- else{for(let n in e.rest)e.bo[n].quaternion.copy(e.rest[n]);g.updateMatrixWorld(true);glbBend(e,e.bo.Head,u.hd.rotation,1);glbBend(e,e.bo.LeftArm,u.arm.rotation,1);glbBend(e,e.bo.RightArm,u.off.rotation,air?1:idle);
+ else{for(let n in e.rest)e.bo[n].quaternion.slerp(e.rest[n],.55);g.updateMatrixWorld(true);glbBend(e,e.bo.Head,u.hd.rotation,1);glbBend(e,e.bo.LeftArm,u.arm.rotation,1);glbBend(e,e.bo.RightArm,u.off.rotation,air?1:idle);
   if(e.d.hl){GZ.set(...e.d.hl);glbBend(e,e.bo.LeftForeArm,GZ,1)}if(e.d.hr){GZ.set(...e.d.hr);glbBend(e,e.bo.RightForeArm,GZ,1)}
   if(e.d.pose&&g===P.g)e.d.pose(e,dt,P.act)}
  glbBend(e,e.bo.RightUpLeg,u.legs[0].rotation,air?1:idle);glbBend(e,e.bo.LeftUpLeg,u.legs[1].rotation,air?1:idle)}}

@@ -672,7 +672,7 @@ function glbLoad(i){let d=GLBH[i];if(!d||d.ok||d.busy||!THREE.GLTFLoader||!THREE
   let m=THREE.SkeletonUtils.clone(d.src),mx=new THREE.AnimationMixer(m),a=mx.clipAction(d.walkC).play(),bo={};m.traverse(o=>{if(o.isBone)bo[o.name]=o});let best=0,bd=1e9,v=new THREE.Vector3(),u=new THREE.Vector3();
   for(let t=0;t<d.walkC.duration;t+=.02){a.time=t;mx.update(0);m.updateMatrixWorld(true);let q=Math.abs(bo.LeftFoot.getWorldPosition(v).z-bo.RightFoot.getWorldPosition(u).z);if(q<bd){bd=q;best=t}}
   d.idleC=ij&&ij.animations[0]?new THREE.AnimationClip('idle',ij.animations[0].duration,ij.animations[0].tracks.filter(k=>k.name.endsWith('.quaternion'))):glbPose(d.walkC,best);m.traverse(o=>{if(o.isSkinnedMesh&&!d.mat){let s=o.material;if(s.map)s.map.encoding=THREE.LinearEncoding;d.mat=rim(LMAT({map:s.map||null,color:s.map?new THREE.Color(1,1,1).multiplyScalar(d.lit||1):s.color,gradientMap:gmH,skinning:true}))}});
-  if(d.adj){glbAdj(d.idleC,d.adj.idle);glbAdj(d.runC,d.adj.run);glbHold(d.walkC,d.runC,d.adj.hold)}d.ok=1;if(typeof mode!='undefined'&&mode=='menu'&&hero==i&&GLBH[i]===d&&!$('#ldT')){portrait(i);menu()}}).catch(e=>console.warn('GLB hero '+i+' unavailable, using built-in model',e))}}
+  d.ols=olsMat(d);if(d.adj){glbAdj(d.idleC,d.adj.idle);glbAdj(d.runC,d.adj.run);glbAdj(d.walkC,d.adj.walk);glbHold(d.walkC,d.runC,d.adj.hold)}d.ok=1;if(typeof mode!='undefined'&&mode=='menu'&&hero==i&&GLBH[i]===d&&!$('#ldT')){portrait(i);menu()}}).catch(e=>console.warn('GLB hero '+i+' unavailable, using built-in model',e))}}
 // For models whose shoes Meshy built back to front (first WOK try had its clogs reversed; set flipFeet:1 on the hero). Turns every shoe vertex 180° around its ankle
 // in the bind pose and bind it rigidly to the foot bone (clogs do not bend at the toes). Geometry is shared by all clones.
 function glbFlipFeet(src){src.updateMatrixWorld(true);src.traverse(o=>{if(!o.isSkinnedMesh)return;let G=o.geometry,P0=G.attributes.position,N=G.attributes.normal,SI=G.attributes.skinIndex,SW=G.attributes.skinWeight,B=o.skeleton.bones,ix=n=>B.findIndex(b=>b.name==n);
@@ -698,7 +698,7 @@ function wPrep(s,d){let b=new THREE.Box3().setFromObject(s),H=b.max.y-b.min.y,k=
  let o=new THREE.Group();o.add(g);return o}
 function glbHero(i){let d=GLBH[i],g=grp(),b=grp(g),m=THREE.SkeletonUtils.clone(d.src),bo={},sk=[],O=()=>new THREE.Object3D();g.userData.b=b;m.scale.setScalar(d.h/1.7);b.add(m);
  m.traverse(o=>{if(o.isBone)bo[o.name]=o;if(o.isSkinnedMesh)sk.push(o)});
- for(let o of sk){o.material=d.mat;o.castShadow=true;o.frustumCulled=false;let q=new THREE.SkinnedMesh(o.geometry,OLS);q.bind(o.skeleton,o.bindMatrix);q.frustumCulled=false;o.parent.add(q)}
+ for(let o of sk){o.material=d.mat;o.castShadow=true;o.frustumCulled=false;let q=new THREE.SkinnedMesh(o.geometry,d.ols||OLS);q.bind(o.skeleton,o.bindMatrix);q.frustumCulled=false;o.parent.add(q)}
  let mx=new THREE.AnimationMixer(m),A={idle:mx.clipAction(d.idleC),walk:mx.clipAction(d.walkC),run:mx.clipAction(d.runC)};for(let k in A)A[k].play().setEffectiveWeight(k=='idle'?1:0);mx.update(0);m.updateMatrixWorld(true);
  let rest={},rest2={};var restL={};for(let n of d.wr?['RightArm','RightForeArm','RightHand']:['LeftArm','LeftForeArm','LeftHand'])rest[n]=bo[n].quaternion.clone();for(let n of['LeftArm','LeftForeArm','RightArm','RightForeArm'])rest2[n]=bo[n].quaternion.clone();for(let n of["LeftUpLeg","LeftLeg","RightUpLeg","RightLeg"])restL[n]=bo[n].quaternion.clone();
  let w2b=n=>b.worldToLocal(bo[n].getWorldPosition(new THREE.Vector3())),sh=w2b('LeftArm');
@@ -714,7 +714,7 @@ function glbGrip(g,m,bo,d,wk){let tmp={m,base:new Map()},ws=d.ws||1;for(let[n,eu
  for(let[hn,key]of[['LeftHand',d.wr?null:wk],['RightHand',d.wr?wk:d.wk2]]){if(!key)continue;let hb=bo[hn],h=new THREE.Object3D(),hp=hb.getWorldPosition(new THREE.Vector3());
   // the hand bone sits at the wrist; palm moves the grip toward the middle of the palm along the forearm direction
   if(d.palm){let fp=bo[hn.replace('Hand','ForeArm')].getWorldPosition(new THREE.Vector3());hp.add(hp.clone().sub(fp).normalize().multiplyScalar(d.palm))}let gp=new THREE.Vector3(...d.grip).multiplyScalar(ws);
-  let want=new THREE.Matrix4().compose(hp.sub(gp),new THREE.Quaternion(),new THREE.Vector3(ws,ws,ws));hb.matrixWorld.clone().invert().multiply(want).decompose(h.position,h.quaternion,h.scale);
+  if(d.wpos)hp.add(new THREE.Vector3(...d.wpos));let want=new THREE.Matrix4().compose(hp.sub(gp),d.wrot?new THREE.Quaternion().setFromEuler(new THREE.Euler(d.wrot[0]*DEG,d.wrot[1]*DEG,d.wrot[2]*DEG)):new THREE.Quaternion(),new THREE.Vector3(ws,ws,ws));hb.matrixWorld.clone().invert().multiply(want).decompose(h.position,h.quaternion,h.scale);
   h.userData.root=g;hb.add(h);if(d.wsrc&&key==wk){let c=d.wsrc.clone();h.add(c);c.traverse(o=>{if(o.isSprite)g.userData.wtip=o})}else sm(h,key,()=>[],.036)}
  for(let[bn,q]of tmp.base)bn.quaternion.copy(q);m.updateMatrixWorld(true)}
 // FAN's dance poses replace the shared melee swing on her arms (body twist and spin still come from the shared attack code).
@@ -799,15 +799,50 @@ function glbBend(e,bone,rot,w){if(!bone||w<=0)return;let m=e.m,bs=e.base.get(bon
  bw.premultiply(rw.clone().invert()).premultiply(dq).premultiply(rw);bone.quaternion.copy(pw.invert().multiply(bw));bone.updateMatrixWorld(true)}
 function glbTick(dt){for(let j=GLBL.length-1;j>=0;j--){let e=GLBL[j],g=e.g;if(g.parent!==sc){if(e.on||!g.parent)GLBL.splice(j,1);continue}e.on=1;if(dt<=0)continue;
  let p=g.position,v=e.px?Math.hypot(p.x-e.px.x,p.z-e.px.z)/dt:0;e.px=p.clone();e.sp+=(Math.min(v,20)-e.sp)*(1-Math.exp(-dt*12));
- let air=p.y>.3,mv=air?0:clamp(e.sp/2,0,1),rn=mv*clamp((e.sp-3)/2.5,0,1),idle=1-mv,u=g.userData;
+ let air=p.y>.3,mv=air?0:clamp(e.sp/2,0,1),rn=mv*clamp((e.sp-3)/2.5,0,1),idle=1-mv,u=g.userData;if(TOOL&&TOOL.anim&&g===P.g){mv=TOOL.anim=='idle'?0:1;rn=TOOL.anim=='run'?1:0;idle=1-mv;air=false}
  e.A.idle.setEffectiveWeight(idle);e.A.walk.setEffectiveWeight(mv-rn);e.A.run.setEffectiveWeight(rn);e.rn=rn;e.mv=mv;e.A.walk.timeScale=clamp(e.sp/3,.7,1.1);e.A.run.timeScale=clamp(e.sp/8.5,.65,1);
  for(let[bn,q]of e.base)bn.quaternion.copy(q);e.base.clear();e.mx.update(dt);
  if(e.d.gun)glbGun(e,u,dt,g===P.g?P.act:null);
  else{for(let n in e.rest)e.bo[n].quaternion.slerp(e.rest[n],.55*(1-(e.d.rh?mv:0)));g.updateMatrixWorld(true);glbBend(e,e.bo.Head,u.hd.rotation,1);if(!e.d.wr)glbBend(e,e.bo.LeftArm,u.arm.rotation,1);glbBend(e,e.bo.RightArm,u.off.rotation,air?1:idle);
   if(e.d.hl){GZ.set(...e.d.hl);glbBend(e,e.bo.LeftForeArm,GZ,1)}if(e.d.hr){GZ.set(...e.d.hr);glbBend(e,e.bo.RightForeArm,GZ,1)}
   if(e.d.pose&&g===P.g)e.d.pose(e,dt,P.act)}
+ if(e.d.atk&&g===P.g&&P.act&&e.d.atk[P.act.n]){let a=P.act,o=e.d.atk[a.n],w=Math.sin(Math.PI*clamp(a.t/(a.dur||.4),0,1));for(let b in o){let bn=e.bo[b],v=o[b];if(bn&&v)bn.quaternion.multiply(RQ.setFromEuler(RE.set(v[0]*DEG*w,v[1]*DEG*w,v[2]*DEG*w)))}}
  glbBend(e,e.bo.RightUpLeg,u.legs[0].rotation,air?1:idle);glbBend(e,e.bo.LeftUpLeg,u.legs[1].rotation,air?1:idle)}}
-for(let i in GLBV){let k=null;try{k=localStorage.getItem('phluGLB25'+i)}catch(e){}glbUse(i,k||GLBV[i].def)}
+/* ---------- data-driven effects and rig tuning: art/data/fx.json + art/data/rig.json, edited with the ?dev tools in tools.js ---------- */
+// fx.json: {presets:{name:{scale,layers:[{t:'spark'|'burst'|'smoke'|'ring'|'flash'|'puff'|'shake', c:'#rrggbb', n, v, l, ..., at: delay s, dy: lift}]}},
+//           binds:[{hero:-1|index, ev:'hit:light'|'act:cast'|'dash'|..., fx:name, at:'target'|'hero', dy, s, cd ms}]}
+let FXD={presets:{},binds:[]},RIGD={heroes:{}},TOOL=null,TSC=1,fxCD={};const DEG=Math.PI/180,RQ=new THREE.Quaternion(),RE=new THREE.Euler();
+const fxN=(v,d,lo,hi)=>v!==null&&v!==''&&v!==undefined&&Number.isFinite(+v)?clamp(+v,lo,hi):d,fxC=v=>/^#[0-9a-f]{6}$/i.test(v)?parseInt(v.slice(1),16):0xffffff;
+function fxLayer(L,x,y,z,s){const c=fxC(L.c),n=Math.round(fxN(L.n,8,0,80)),yy=y+fxN(L.dy,0,-3,6)*s;
+ if(L.t=='spark')spark(x,yy,z,n,c,fxN(L.v,5,0,30)*s,fxN(L.l,.6,.05,4),fxN(L.g,6,-20,30));
+ else if(L.t=='burst')burst(['ball','willow','flower','ring'].includes(L.k)?L.k:'ball',x,yy,z,fxN(L.v,6,0,30)*s,n,c,fxN(L.l,.9,.05,4));
+ else if(L.t=='smoke')smoke(x,yy,z,n,c,fxN(L.sz,.7,.1,5)*s,fxN(L.v,1.4,0,10));
+ else if(L.t=='ring')ring(x,z,fxN(L.r,2,.1,20)*s,c,fxN(L.l,.35,.05,3));
+ else if(L.t=='flash')flash(x,yy+.5,z,c,fxN(L.i,3,0,10));
+ else if(L.t=='shake')shake=Math.max(shake,fxN(L.i,.3,0,2));
+ else if(L.t=='puff'){let k=Math.round(fxN(L.k,1,0,8)),sp=fxN(L.v,2,0,20)*s,u=fxN(L.up,1,-10,20);for(let i=0;i<n;i++){let a=R(TAU),r=sp*R(.4,1);vfx(k,x+Math.cos(a)*.1*s,yy,z+Math.sin(a)*.1*s,{c,vx:Math.cos(a)*r,vz:Math.sin(a)*r,vy:u*R(.6,1.2),l:fxN(L.l,.6,.05,4)*R(.8,1.1),s:fxN(L.s0,.5,.02,6)*s,s1:fxN(L.s1,1,.02,8)*s,g:fxN(L.g,0,-20,30),must:1})}}}
+// play a preset (an object, or a name in FXD.presets: named plays are also sent to the other players)
+function fxPlay(p,x,y,z,o={}){if(typeof p=='string'){if(!o.net)rec('F',p,x,y,z);p=FXD.presets[p]}if(!p||!Array.isArray(p.layers))return;let s=fxN(o.s,1,.1,5)*fxN(p.scale,1,.1,5);
+ for(let L of p.layers.slice(0,16)){if(!L||L.off)continue;let d=fxN(L.at,0,0,3);if(d>0)later(d,()=>fxLayer(L,x,y,z,s));else fxLayer(L,x,y,z,s)}}
+// game events call this; every bind matching the event (and the current hero, or hero -1 = all) plays its preset, throttled per bind
+function fxHook(ev,x,y,z){if(!FXD.binds.length)return;let now=performance.now();for(let i=0;i<FXD.binds.length;i++){let b=FXD.binds[i];if(!b||b.ev!==ev||b.off)continue;if(b.hero!==undefined&&+b.hero!==-1&&+b.hero!==hero)continue;
+ if(now-(fxCD[i]||0)<fxN(b.cd,60,0,5000))continue;fxCD[i]=now;let at=b.at=='hero'&&P?{x:P.x,y:P.y+1,z:P.z}:{x,y,z};fxPlay(b.fx,at.x,at.y+fxN(b.dy,0,-3,6),at.z,{s:b.s})}}
+// rig.json: {heroes:{index:{h,lit,olw, grip,ws,palm,hl,hr,wrot,wpos, adj:{idle|walk|run|hold:{Bone:[x,y,z(deg),keep]}}, atk:{actionName:{Bone:[x,y,z]}}}}} merged over the built-in tuning
+const RIGB=['Hips','Spine','Spine01','Spine02','neck','Head','LeftShoulder','LeftArm','LeftForeArm','LeftHand','RightShoulder','RightArm','RightForeArm','RightHand','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot'];
+const rigV=(a,n)=>Array.isArray(a)?a.slice(0,n).map((v,i)=>fxN(v,i==3?1:0,-360,360)):null;
+function rigApply(){for(let i in RIGD.heroes){let r=RIGD.heroes[i],V=GLBV[i];if(!V||!r||typeof r!='object')continue;let o=V.opt[V.def];
+ for(let k of['h','lit','olw'])if(Number.isFinite(r[k]))o[k]=r[k];for(let k of['ws','palm'])if(Number.isFinite(r[k]))V.common[k]=r[k];
+ for(let k of['grip','hl','hr','wrot','wpos'])if(rigV(r[k],3))V.common[k]=rigV(r[k],3);
+ if(r.adj&&typeof r.adj=='object'){o.adj=Object.assign({},o.adj);for(let c of['idle','walk','run','hold']){let a=r.adj[c];if(!a||typeof a!='object')continue;let m=Object.assign({},o.adj[c]);for(let b in a)if(RIGB.includes(b)){if(a[b]===null)delete m[b];else m[b]=rigV(a[b],4)}o.adj[c]=m}}
+ if(r.atk&&typeof r.atk=='object'){let A={};for(let a in r.atk)if(/^[a-z]{2,10}$/.test(a)&&r.atk[a]&&typeof r.atk[a]=='object'){A[a]={};for(let b in r.atk[a])if(RIGB.includes(b))A[a][b]=rigV(r.atk[a][b],3)}o.atk=A}}}
+// per-hero outline (width from rig olw) on the smoothed onorm hull
+function olsMat(d){let m=new THREE.MeshBasicMaterial({color:0x14121f,side:THREE.BackSide,skinning:true});d.olu={value:Number.isFinite(d.olw)?d.olw:.0085};m.onBeforeCompile=s=>{s.uniforms.olw=d.olu;s.vertexShader='attribute vec3 onorm;\nuniform float olw;\n'+s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed+=normalize(onorm)*olw;')};return m}
+const DEV=/[?&]dev\b/.test(location.search);
+function dataLoad(){let j=u=>location.protocol=='file:'?Promise.resolve(null):fetch(u,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null),to=()=>new Promise(r=>setTimeout(r,2500,null)),ls=k=>{if(!DEV)return null;try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+ return Promise.all([Promise.race([j('art/data/fx.json'),to()]),Promise.race([j('art/data/rig.json'),to()])]).then(([f,r])=>{f=ls('phlu-dev-fx')||f;r=ls('phlu-dev-rig')||r;
+  if(f&&typeof f=='object'){FXD.presets=f.presets&&typeof f.presets=='object'?f.presets:{};FXD.binds=Array.isArray(f.binds)?f.binds.slice(0,64):[]}if(r&&r.heroes&&typeof r.heroes=='object'){RIGD=r;try{rigApply()}catch(e){console.warn('rig.json skipped',e)}}})}
+dataLoad().catch(()=>{}).then(()=>{for(let i in GLBV){let k=null;try{k=localStorage.getItem('phluGLB25'+i)}catch(e){}glbUse(i,k||GLBV[i].def)}if(DEV){let t=document.createElement('script');t.src='tools.js';document.body.appendChild(t)}});
+
 /* ---------- aim guide: dashed line toward the cursor + ring where point skills land (desktop only) ---------- */
 const AIM=(()=>{let g=new THREE.Group(),cv=document.createElement('canvas');cv.width=64;cv.height=8;let x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,38,8);
  let tx=new THREE.CanvasTexture(cv);tx.wrapS=THREE.RepeatWrapping;let mm=o=>new THREE.MeshBasicMaterial(Object.assign({color:0xffffff,transparent:true,depthWrite:false,opacity:.55},o));
@@ -1826,7 +1861,7 @@ function spawn(t,el,x,z){if(E.length>26)return;if(x===undefined&&NEST&&NEST.lock
 function spawnBoss(i,bx=0,bz=12,hm=1){let b=BOSS[i],g=ghost(b.m,b.c);g.scale.setScalar(.01);sc.add(g);let hp=b.hp*hm*[.75,1,1.4][hard]*crowd();let e={id:++NET.eid,t:'boss',bi:i,boss:1,big:1,n:b.n,x:bx,y:i==0?.8:0,z:bz,vx:0,vy:0,vz:0,g,s:b.s,r:b.s*(i==2?.95:.6),hp,mh:hp,d:18,dd:{v:3},fly:i==0?.8:0,st:0,cd:2,in:1,fl:0,lit:0,burn:0,frz:0,wu:0,ph:0,pi:0};E.push(e);G.boss=e;G.wait=0;sfx('roar');shake=.8;ring(bx,bz,8,b.c,1)}
 /* ---------- damage ---------- */
 function dnum(x,y,z,t,c,s,k){if(!SET.dn&&/^[\d.]+!?$/.test(String(t)))return;if(DN.length>=60){if(!k)return;DN.shift()}let L=k?1.05:.8,n=DN.filter(q=>q.L-q.l<.25&&Math.abs(q.v.x-x)<1.6&&Math.abs(q.v.z-z)<1.6).length;DN.push({v:new V3(x+R(-.4,.4),y+n*(k?.75:.5),z),t,c,s,k,l:L,L,dx:R(-.7,.7)})}
-function hit(e,d,o={}){if(e.dead||e.in>0)return;let cr=Math.random()<S.crit;d*=S.dmg*(P.pow>0?1.5:1)*(o.k?S[o.k]:1)*(cr?2:1)*(1+Math.min(G.combo,60)*.004);if(P.y>.6&&o.melee)d*=1.15*S.air;if(e.lit>0)d*=1+S.lit;if(o.lit)e.lit=3;
+function hit(e,d,o={}){if(e.dead||e.in>0)return;fxHook('hit:'+(o.k||'light'),e.x,(e.y||0)+1,e.z);let cr=Math.random()<S.crit;d*=S.dmg*(P.pow>0?1.5:1)*(o.k?S[o.k]:1)*(cr?2:1)*(1+Math.min(G.combo,60)*.004);if(P.y>.6&&o.melee)d*=1.15*S.air;if(e.lit>0)d*=1+S.lit;if(o.lit)e.lit=3;
  if(NET.cl){netHit(e,d,o);e.hp=Math.max(.5,e.hp-d)}else e.hp-=d;e.fl=.1;e.faceHit=.36;G.combo++;G.ct=2.6;if(!o.bot){if(!(G.rage>0))G.rg=Math.min(100,(G.rg||0)+(o.k=='light'?2.4:1.6));G.rgT=0;if(G.rage>0)rageHit(e,o)}G.best=Math.max(G.best,G.combo);G.ult=Math.min(100,G.ult+(o.ult?0:1.1*S.ult));dnum(e.x,e.y+e.r*2+.4,e.z,Math.round(d)+(cr?"!":""),cr?"#ffd34d":e.lit>0?"#fff1b8":"#f4f6ff",cr?36:o.big?27:21,cr);if(cr){sfx("crit");stop_=Math.max(stop_,.04);spark(e.x,e.y+e.r+.3,e.z,10,0xffd34d,7,.35)}
  let a=o.a===undefined?angT(P,e):o.a;if(!e.big||o.force){let kb=o.kb===undefined?4:o.kb;e.vx=Math.sin(a)*kb;e.vz=Math.cos(a)*kb;if(o.up){e.vy=o.up;e.y=Math.max(e.y,.05);e.air=1}else if(e.air)e.vy=Math.max(e.vy,2.6);e.st=Math.max(e.st,o.up?.9:o.melee?.55:.32);e.wu=0;e.ch=0}else if(o.big){e.st=e.boss?0:.25}
  spark(e.x,e.y+e.r,e.z,o.big?14:6,o.c||HERO[hero].c,o.big?7:5,.4);star(e.x+R(-.2,.2),e.y+e.r+.2,e.z+e.r*.5,cr?0xffd34d:0xffffff,o.big||cr?2.6:1.5);e.rec=.16;sfx('hit');if(o.melee){stop_=Math.max(stop_,o.big?.075:.035);shake=Math.max(shake,o.big?.35:.12);if(S.ls)P.hp=Math.min(S.max,P.hp+S.ls);if(Math.random()<S.bolt){let q=E.filter(n=>n!=e&&!n.dead&&hyp(n,e)<6).slice(0,3);q.forEach(n=>{spark(n.x,1,n.z,12,0x9fd8ff,6,.3,0);hit(n,14,{kb:1})})}}
@@ -1870,11 +1905,11 @@ function useBag(){let k=P.bag[0];if(!k){dnum(P.x,P.y+2.4,P.z,'กระเป๋
  if(k=='ice'){decal(5,P.x,P.z,9,2.6,0xa8dcff);for(let i=0;i<12;i++){let q=i*TAU/12;vfx(1,P.x+Math.cos(q)*3,.5,P.z+Math.sin(q)*3,{c:0xd8f0ff,vx:Math.cos(q)*6,vz:Math.sin(q)*6,vy:.4,l:1,s:.6,s1:1.6})}if(NET.cl)rec('I',P.x,P.z);for(let e of E)if(!e.dead&&hyp(e,P)<9+e.r)e.frz=5}
  if(k=='bomb'){let o=aimPt(11);warn(o.x,o.z,4,.7,()=>boom(o.x,0,o.z,4,110,{up:9,c:0xff5470}),0xffb52e)}}
 function dropAnchor(){if(P.anchor){sc.remove(P.anchor.g);P.anchor=null}}
-function act(n,dur,o){P.act=Object.assign({n,t:0,dur,ev:[],lock:.25},o)}
+function act(n,dur,o){P.act=Object.assign({n,t:0,dur,ev:[],lock:.25},o);fxHook('act:'+n,P.x,P.y+1,P.z)}
 function press(k){if(mode!='play')return;buf=k;bufT=.4}
 function tryBuf(){if(!buf)return;let k=buf,a=P.act,free=!a||a.t>=a.dur*.72;
- if(k=='dash'){if(P.dash<1||P.dt>0)return;P.dash--;P.dcd=P.dcd>0?P.dcd:1.4;let mv=input(),f=Math.hypot(mv.x,mv.z)>.1?Math.atan2(mv.x,mv.z):aim();P.f=f;P.dt=.2;P.inv=Math.max(P.inv,.28);P.act=null;heavyHeld=false;P.ds=.4;smoke(P.x,P.y,P.z,4,0x9a95a8,.6,1.6);P.vy=Math.max(P.vy,0);sfx('dash');if(S.dashd)boom(P.x,P.y,P.z,2.4,25*S.dashd,{kb:4})}
- else if(k=='jump'){if(P.jump<1||a&&a.n=='plunge'||a&&a.n=='ride')return;P.jump--;P.vy=10.5;P.act=null;heavyHeld=false;P.y=Math.max(P.y,.01);sfx('jump');P.sv=(P.sv||0)+4.2;smoke(P.x,P.y,P.z,3,0x9a95a8,.5,1.6)}
+ if(k=='dash'){if(P.dash<1||P.dt>0)return;P.dash--;P.dcd=P.dcd>0?P.dcd:1.4;let mv=input(),f=Math.hypot(mv.x,mv.z)>.1?Math.atan2(mv.x,mv.z):aim();P.f=f;P.dt=.2;P.inv=Math.max(P.inv,.28);P.act=null;heavyHeld=false;P.ds=.4;smoke(P.x,P.y,P.z,4,0x9a95a8,.6,1.6);P.vy=Math.max(P.vy,0);sfx('dash');fxHook('dash',P.x,P.y+.5,P.z);if(S.dashd)boom(P.x,P.y,P.z,2.4,25*S.dashd,{kb:4})}
+ else if(k=='jump'){if(P.jump<1||a&&a.n=='plunge'||a&&a.n=='ride')return;P.jump--;P.vy=10.5;P.act=null;heavyHeld=false;P.y=Math.max(P.y,.01);sfx('jump');fxHook('jump',P.x,P.y+.3,P.z);P.sv=(P.sv||0)+4.2;smoke(P.x,P.y,P.z,3,0x9a95a8,.5,1.6)}
  else if(k=='r'){reload()}
  else if(k=='light'){if(!free)return;if(P.y>.35&&P.air>=1)return buf=null;if(P.lcd>0)return;if(!ammo(1))return;lock();if(P.ds>0&&P.y<=.35&&DASH[hero]){P.ds=0;P.lcd=.3;DASH[hero]();buf=null;return}if(ar()==0)P.lcd=.46*HERO[hero].ts/S.atk;if(hero==0&&P.y<=.35){P.lcd=(RAGE()?.048:.085)/S.atk;act("light",.07,{i:0,lock:.8,ev:[[.005,()=>gun(0,{gat:1})]]});return}let c=HERO[hero].c;if(P.y>.35){if(P.air>=1)return buf=null;let i=P.air++;P.vy=Math.min(P.vy,1.5);act('air',.4/S.atk*slowL(),{i,lock:.7,lunge:P.gap,ev:[[.12,()=>{if(ar()!=1)return gun(i,{d:17});swing(2.9,i==2?6.3:3.6,i==2?24:15,{k:'light',kb:i==2?8:1.5,up:i==2?0:4.5,big:i==2});slash(P.x,P.y+.9,P.z,P.f,2.9,i==2?'f':'w',c,[.5,-.5,0][i])}]]})}
   else if(P.ds>0){P.ds=0;act('thrust',.52/S.atk*slowL(),{lunge:ar()==1?Math.max(15,P.gap):0,lock:.5,ev:[[.06,()=>{if(ar()!=1)return gun(2,{d:17});swing(3.4,1.5,24,{k:'light',kb:8,big:1});slash(P.x,.9,P.z,P.f,3.4,'n',0xfff1b8)}]]})}
@@ -2184,7 +2219,7 @@ function replay(a,m,fromHost){let k=a[0],v=(i,lo=-450,hi=450)=>num(a[i],lo,hi),o
  else if(k=='H'){if(mode=='play'&&hyp(P,{x:v(1),z:v(2)})<v(3,0,6)){let q=v(4,0,8);P.hp=Math.min(S.max,P.hp+q);dnum(P.x,P.y+2.4,P.z,'+'+q,'#4fe0b5',17)}}
  else if(k=='Y'){if(mode=='play'&&hyp(P,{x:v(1),z:v(2)})<9){P.pow=8;say('ได้จังหวะฮึก!')}}
  else if(k=='W'){let c=NEST&&NEST.C[v(1,0,40)|0],b=c&&c.vial&&c.vial.b[v(2,0,1)|0];if(b&&!b.got){b.got=1;b.g.visible=false}}
- else if(!NET.cl){NET.rp=0;if(k=='d')applyHit(a);else if(k=='V'){let x=v(1),z=v(2);for(let e of E)if(!e.dead&&!e.boss&&hyp(e,{x,z})<7){let q=Math.atan2(x-e.x,z-e.z);e.vx=Math.sin(q)*8;e.vz=Math.cos(q)*8;e.st=.3;e.wu=0}}else if(k=='I'){let o={x:v(1),z:v(2)};for(let e of E)if(!e.dead&&hyp(e,o)<9+e.r)e.frz=5}NET.rp=1}}
+ else if(!NET.cl){NET.rp=0;if(k=='d')applyHit(a);else if(k=='V'){let x=v(1),z=v(2);for(let e of E)if(!e.dead&&!e.boss&&hyp(e,{x,z})<7){let q=Math.atan2(x-e.x,z-e.z);e.vx=Math.sin(q)*8;e.vz=Math.cos(q)*8;e.st=.3;e.wu=0}}else if(k=='I'){let o={x:v(1),z:v(2)};for(let e of E)if(!e.dead&&hyp(e,o)<9+e.r)e.frz=5}else if(k=='F'&&typeof a[1]=='string'&&FXD.presets[a[1]])fxPlay(FXD.presets[a[1]],v(2),v(3),v(4),{net:1});NET.rp=1}}
 function promote(){NET.cl=false;NET.lostAt=0;NET.ep=Math.max(NET.ep,...[...NET.R.values()].map(m=>m.ep||0),NET.epSeen||0)+1;NET.eid=Math.max(NET.eid,...E.map(e=>e.id||0),0)+1000;for(let e of E){e.cd=R(1.5,3);e.wu=0;e.ch=0;e.vx=e.vz=e.vy=0;if(e.boss){e.pi=0;e.hold=0;G.boss=e}}G.wait=0;if(NEST&&NEST.lock>=0&&NEST.C[NEST.lock].t=='boss'&&!G.boss){let c=NEST.C[NEST.lock];G.wait=1;later(1,()=>spawnBoss(2,c.x,c.z))}say('คุณเป็นเจ้าห้องแล้ว')}
 /* chat and emotes ride in presence, deduplicated by sequence. A peer who drops and returns keeps its place (NET.memo),
    so lines sent meanwhile still arrive for up to 45 s; a stranger only sees lines younger than 8 s. */
@@ -2376,8 +2411,8 @@ function drawHeroSelect(){
   sc.background=background;
  }
 }
-let lt=performance.now(),mt=0,cx=0,cz=0;function frame(n){let dt=clamp((n-lt)/1000,0,.034);lt=n;if(lab){dt*=lab.paused?0:lab.speed;if(dt>0)labTick(dt)}music();if(NET.room)netTick(n);if(G&&G.go)goTick();if(live()){if(stop_>0&&!NET.on)stop_-=dt;else step(dt);if(NET.on){remotes(dt);if(!P.act&&mode=='play')emPose(P.g.userData,NET.em)}}else{T+=dt;if(mode=='menu'){scarf(P.g.userData,1.5,0,dt);P.g.userData.b.position.y=Math.sin(T*2.4)*.03;P.g.userData.hd.rotation.z=Math.sin(T*1.3)*.08;P.g.rotation.y=Math.sin(T*.7)*.6;mt-=dt;if(mt<0){mt=.5;if(!ov.classList.contains("hero-select"))spark(R(-18,18),R(6,13),R(-22,-8),60,pick(COL),8,1.4,3)}}}parts(dt);glbTick(dt);aimTick();if(!lab||dt>0)fxUp(dt);for(let b of bl){b.t-=dt;b.intensity=b.t>0?b.i*b.t/.35:0}shake*=Math.pow(.01,dt);
- let k=1-Math.pow(.001,dt);cx+=(P.x-cx)*k;cz+=(P.z-cz)*k;let sh=calm||lab?0:shake*.5*SET.shake;if(mode=='menu'){{let w=vw>=700&&vw/vh>=1.1;cam.position.set(Math.sin(T*.2)*.6,3,w?12.6:13.8);cam.lookAt(0,1.5,4);SEE.value.z=-2;cam.setViewOffset(vw,vh,w?vw*.24:0,w?-vh*.035:vh*.24,vw,vh)}}else{if(cam.view&&cam.view.enabled)cam.clearViewOffset();cam.position.set(cx+CYS*10.6*SET.cz+R(-sh,sh),15.6*SET.cz+R(-sh,sh),cz+CYC*10.6*SET.cz);cam.lookAt(cx-CYS*.6,1.1+P.y*.15,cz-CYC*.6);cam.updateMatrixWorld();seeUp()}sun.position.set(cx+10,24,cz+8);sun.target.position.set(cx,0,cz);OLM.uniforms.res.value.set(vw,vh);OLM.uniforms.fc.value.copy(sc.fog.color);TIME.value=T;decoUp();if(mode==="menu"&&ov.classList.contains("hero-select")&&!ov.hidden)drawHeroSelect();else PP.draw();overlay(dt);hud();requestAnimationFrame(frame)}
+let lt=performance.now(),mt=0,cx=0,cz=0;function frame(n){let dt=clamp((n-lt)/1000,0,.034)*TSC;lt=n;if(lab){dt*=lab.paused?0:lab.speed;if(dt>0)labTick(dt)}music();if(NET.room)netTick(n);if(G&&G.go)goTick();if(live()){if(stop_>0&&!NET.on)stop_-=dt;else step(dt);if(NET.on){remotes(dt);if(!P.act&&mode=='play')emPose(P.g.userData,NET.em)}}else{T+=dt;if(mode=='menu'){scarf(P.g.userData,1.5,0,dt);P.g.userData.b.position.y=Math.sin(T*2.4)*.03;P.g.userData.hd.rotation.z=Math.sin(T*1.3)*.08;P.g.rotation.y=Math.sin(T*.7)*.6;mt-=dt;if(mt<0){mt=.5;if(!ov.classList.contains("hero-select"))spark(R(-18,18),R(6,13),R(-22,-8),60,pick(COL),8,1.4,3)}}}parts(dt);glbTick(dt);aimTick();if(!lab||dt>0)fxUp(dt);for(let b of bl){b.t-=dt;b.intensity=b.t>0?b.i*b.t/.35:0}shake*=Math.pow(.01,dt);
+ let k=1-Math.pow(.001,dt);cx+=(P.x-cx)*k;cz+=(P.z-cz)*k;let sh=calm||lab?0:shake*.5*SET.shake;if(mode=='menu'){{let w=vw>=700&&vw/vh>=1.1;cam.position.set(Math.sin(T*.2)*.6,3,w?12.6:13.8);cam.lookAt(0,1.5,4);SEE.value.z=-2;cam.setViewOffset(vw,vh,w?vw*.24:0,w?-vh*.035:vh*.24,vw,vh)}}else{if(cam.view&&cam.view.enabled)cam.clearViewOffset();cam.position.set(cx+CYS*10.6*SET.cz+R(-sh,sh),15.6*SET.cz+R(-sh,sh),cz+CYC*10.6*SET.cz);cam.lookAt(cx-CYS*.6,1.1+P.y*.15,cz-CYC*.6);cam.updateMatrixWorld();seeUp()}sun.position.set(cx+10,24,cz+8);sun.target.position.set(cx,0,cz);OLM.uniforms.res.value.set(vw,vh);OLM.uniforms.fc.value.copy(sc.fog.color);TIME.value=T;if(TOOL&&TOOL.tick)try{TOOL.tick(dt)}catch(e){console.warn(e)}decoUp();if(mode==="menu"&&ov.classList.contains("hero-select")&&!ov.hidden)drawHeroSelect();else PP.draw();overlay(dt);hud();requestAnimationFrame(frame)}
 const KEEP=new Set(sc.children);applyQ();cv.style.cursor='crosshair';
 (function preload(){let L=[...HERO.map((h,i)=>[h.n,()=>heroModel(i)]),...Object.keys(ET).map(k=>[ET[k].n,()=>ghost(k)]),...BOSS.map(b=>[b.n,()=>ghost(b.m,b.c)])],n=L.length+1,k=0,tmp=new THREE.Group();sc.add(tmp);
  let set=t=>{let q=Math.round(k/n*100);$('#ldT').textContent=t;$('#ldB i').style.width=q+'%';$('#ldB').setAttribute('aria-valuenow',q);$('#ldN').textContent=k+' / '+n};

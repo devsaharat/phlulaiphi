@@ -596,14 +596,33 @@ function cloudTex(){let n=512,c=document.createElement('canvas');c.width=c.heigh
    The night falls as the run goes on: stage 1 is a bright golden evening, 2 dusk, 3 night, 4 midnight under the red moon.
    Each entry overrides the act theme (sky s, grass g, dirt d, tree/rock tints kt/kr, rim) and sets the lights and fog. */
 const TOD=[null,
- {s:0x9fcdee,g:0x587c46,d:'#ad7a4a',kt:0xc8d4c0,kr:0xc0c0b8,rim:0xfff1c8,hemi:[0xf4f8ff,0x4e6a34,.58],sun:[0xfff0d2,.72],lamp:.25,fog:[48,120],moon:0xfff8e0,dark:.66},
- {s:0xd98a66,g:0x3f7438,d:'#9a6744',kt:0xe8c8b4,kr:0xb8a49c,rim:0xffb070,hemi:[0xffd2ac,0x40343e,.6],sun:[0xffa462,.78],lamp:.6,fog:[42,105],moon:0xffc070,dark:.64},
- {s:0x16214f,g:0x2f5d4b,d:'#7d6c4c',hemi:[0x8fa4ff,0x2c2440,.72],sun:[0xcdd8ff,.58],lamp:.85,fog:[34,88],moon:0xfff1c8,dark:.66},
- {s:0x2b1226,g:0x4a3140,d:'#94604e',hemi:[0xb48cff,0x2c1430,.66],sun:[0xffb4a0,.5],lamp:1,fog:[32,84],moon:0xff7a4d,dark:.64}];
+ {s:0x9fcdee,g:0x587c46,d:'#ad7a4a',kt:0xc8d4c0,kr:0xc0c0b8,rim:0xfff1c8,water:0xffffff,hemi:[0xf4f8ff,0x4e6a34,.58],sun:[0xfff0d2,.72],lamp:.25,fog:[48,120],moon:0xfff8e0,dark:.66},
+ {s:0xd98a66,g:0x3f7438,d:'#9a6744',kt:0xe8c8b4,kr:0xb8a49c,rim:0xffb070,water:0xf2c4a8,hemi:[0xffd2ac,0x40343e,.6],sun:[0xffa462,.78],lamp:.6,fog:[42,105],moon:0xffc070,dark:.64},
+ {s:0x16214f,g:0x2f5d4b,d:'#7d6c4c',water:0x5a6c9e,hemi:[0x8fa4ff,0x2c2440,.72],sun:[0xcdd8ff,.58],lamp:.85,fog:[34,88],moon:0xfff1c8,dark:.66},
+ {s:0x2b1226,g:0x4a3140,d:'#94604e',water:0x7a5a86,hemi:[0xb48cff,0x2c1430,.66],sun:[0xffb4a0,.5],lamp:1,fog:[32,84],moon:0xff7a4d,dark:.64}];
 function todLights(t){hemi.color.setHex(t.hemi[0]);hemi.groundColor.setHex(t.hemi[1]);hemi.intensity=t.hemi[2];sun.color.setHex(t.sun[0]);sun.intensity=t.sun[1];lamp.intensity=t.lamp;sc.fog.near=t.fog[0];sc.fog.far=t.fog[1]}
 const NIGHT={hemi:[0x8fa4ff,0x2c2440,.6],sun:[0xcdd8ff,.5],lamp:.85,fog:[32,85]};
 // painted grass that tiles: soft patches of lighter and darker green, short strokes, a few flowers and pebbles, and the
 // large faint shadows of passing clouds; tm darkens it (dense grass outside the walkable area)
+// anime water: sandy banks, a white foam line, a light-to-deep blue body and soft ripple dashes; the map scrolls to make it flow
+function waterTex(){let w=256,hh=512,c=document.createElement('canvas');c.width=w;c.height=hh;let x=c.getContext('2d'),g=x.createLinearGradient(0,0,w,0);
+ g.addColorStop(0,'#d8c08c');g.addColorStop(.09,'#d8c08c');g.addColorStop(.12,'#f4fbff');g.addColorStop(.16,'#8fd0ef');g.addColorStop(.5,'#4f9fd6');g.addColorStop(.84,'#8fd0ef');g.addColorStop(.88,'#f4fbff');g.addColorStop(.91,'#d8c08c');g.addColorStop(1,'#d8c08c');x.fillStyle=g;x.fillRect(0,0,w,hh);
+ for(let i=0;i<70;i++){x.globalAlpha=R(.35,.7);x.strokeStyle=pick(['#c8ecff','#e6f7ff','#7cc0e8']);x.lineWidth=R(2,3.5);let px=R(.2,.8)*w,py=R(hh),l=R(14,34);x.beginPath();x.moveTo(px-l/2,py);x.quadraticCurveTo(px,py-R(2,5),px+l/2,py);x.stroke()}
+ for(let i=0;i<60;i++){x.globalAlpha=.6;x.fillStyle=pick(['#bfa776','#e8d4a4']);x.beginPath();x.arc(pick([R(.01,.08),R(.92,.99)])*w,R(hh),R(1.5,3),0,TAU);x.fill()}
+ let t=new THREE.CanvasTexture(c);t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
+// a river across the gap between the first and second rows of chambers, sized and wiggled so it never cuts into a chamber
+function riverPlan(N){let r1=[N.C[1],N.C[2]],r2=[N.C[3],N.C[4]],e1=Math.min(...r1.map(c=>c.z-c.r)),e2=Math.max(...r2.map(c=>c.z+c.r)),gap=e1-e2;if(gap<7)return null;
+ let hw=Math.min(4.2,gap/2-1.6),amp=clamp(gap/2-hw-.6,0,1.6);return{z:(e1+e2)/2,hw,amp,ph:R(TAU),Z(x){return this.z+Math.sin(x*.05+this.ph)*this.amp}}}
+function buildRiver(N,own,th){let RV=N.riv;if(!RV)return;let x0=N.cx-160,x1=N.cx+160,st=1.5,n=Math.ceil((x1-x0)/st),pos=[],uv=[],idx=[];
+ for(let i=0;i<=n;i++){let x=x0+i*st,z=RV.Z(x),dz=(RV.Z(x+.5)-RV.Z(x-.5)),L=Math.hypot(1,dz),nx=-dz/L,nz=1/L;pos.push(x+nx*RV.hw,0,z+nz*RV.hw,x-nx*RV.hw,0,z-nz*RV.hw);uv.push(0,i*st/12,1,i*st/12);if(i<n){let a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}}
+ let g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+ let wt=waterTex(),m=own(g,new THREE.MeshBasicMaterial({map:wt,color:th.water||0xffffff,side:THREE.DoubleSide}));m.position.y=.07;m.userData.tex=1;m.renderOrder=1;N.water=wt;
+ // wooden plank bridges where a path crosses the water
+ for(let t of N.T){let a=N.C[t.a],b=N.C[t.b],prev=null,hit=null;for(let k=0;k<=60;k++){let u=k/60,x=a.x+(b.x-a.x)*u,z=a.z+(b.z-a.z)*u,sd=z-RV.Z(x);if(prev!==null&&Math.sign(sd)!=Math.sign(prev)){hit={x,z};break}prev=sd}if(!hit)continue;
+  let br=new THREE.Group(),W=t.w*2-.6,Lb=RV.hw*2+3,np=Math.round(Lb/.62);br.position.set(hit.x,0,hit.z);br.rotation.y=Math.atan2(b.x-a.x,b.z-a.z);room.add(br);
+  for(let k=0;k<np;k++)mk(br,'b',k%2?0x9a6a3e:0x8a5a34,0,.12,-Lb/2+(k+.5)*Lb/np,W,.16,Lb/np-.07);
+  for(let s of[-1,1]){mk(br,'b',0x6b4428,s*(W/2-.05),.02,0,.22,.14,Lb);for(let k=0;k<=4;k++){let z=-Lb/2+k*Lb/4;mk(br,'b',0x6b4428,s*(W/2-.05),.55,z,.2,1.05,.2)}mk(br,'b',0x7d5230,s*(W/2-.05),.98,0,.14,.12,Lb)}
+  br.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}})}}
 function grassTex(th,tm=1){let n=512,c=document.createElement('canvas');c.width=c.height=n;let x=c.getContext('2d'),b=new THREE.Color(th.g).multiplyScalar(tm),css=k=>'#'+b.clone().multiplyScalar(k).getHexString(),wrap=(f)=>{for(let ox of[-n,0,n])for(let oy of[-n,0,n])f(ox,oy)};
  x.fillStyle=css(1);x.fillRect(0,0,n,n);
  for(let i=0;i<70;i++){let cx=R(n),cy=R(n),rx=R(30,110),ry=R(20,70),k=pick([.86,.92,1.08,1.16]),a=R(3);wrap((ox,oy)=>{x.globalAlpha=R(.25,.45);x.fillStyle=css(k);x.beginPath();x.ellipse(cx+ox,cy+oy,rx,ry,a,0,TAU);x.fill()})}
@@ -696,12 +715,13 @@ function buildNest(fl){let act=Math.min(2,fl-1);
  let gIn=grassTex(th,1);N.C.forEach((c,i)=>{let tx=gIn.clone();tx.needsUpdate=true;let d=(c.r+.8)*2/20;tx.repeat.set(d,d);tx.offset.set(c.x/20%1,-c.z/20%1);let m=own(new THREE.CircleGeometry(c.r+.8,48),LMAT({map:tx,gradientMap:gm}));m.rotation.x=-Math.PI/2;m.position.set(c.x,.02,c.z);m.receiveShadow=true;m.userData.tex=1});
  let dtx=dirtTex(th),rtx=dirtTex(th,1),pi0=0;for(let t of N.T){pi0++;let a=N.C[t.a],b=N.C[t.b],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),pw=t.w;
   for(let layer of[0,1]){let w2=layer?pw*2:pw*2+.5,pg=new THREE.PlaneGeometry(w2,L+(layer?0:.5));pg.rotateX(-Math.PI/2);let tx=(layer?dtx:rtx).clone();tx.needsUpdate=true;tx.repeat.set(1,L/(pw*4));let m=own(pg,LMAT({map:tx,gradientMap:gm,transparent:true,alphaTest:.35}));m.rotation.y=Math.atan2(dx,dz);m.position.set((a.x+b.x)/2,layer?.045+pi0*.002:.03+pi0*.0008,(a.z+b.z)/2);m.receiveShadow=true;m.renderOrder=1;m.userData.tex=1}}
+ N.riv=riverPlan(N);buildRiver(N,own,th);
  // walls: trees, bushes and rocks ring every chamber except at tunnel mouths, and line both sides of every tunnel
  let many={},put=(nm,...v)=>(many[nm]=many[nm]||[]).push(v),TR=[['Tree_1_A','Tree_1_B','Tree_2_B','Tree_4_A'],['Tree_4_A','Tree_2_B','Tree_Bare_1_B','Tree_Bare_2_B'],['Tree_Bare_1_B','Tree_Bare_2_B','Tree_Bare_1_B','Tree_4_A']][act];
- let wall=(x,z,big)=>{if(nIn(x,z,.4))return;if(big&&nIn(x-CYS*7,z-CYC*7,1.5))big=0;let w=RI(big?10:7),k=R(.85,1.3),ry=R(TAU);if(big&&w<4)put(TR[w],x,0,z,k,ry);else if(w<(big?7:5))put(act==2?'Rock_2_C':['Bush_2_D','Bush_4_D','Bush_1_D'][w%3],x,0,z,k,ry);else put(w%2?'Rock_1_J':'Rock_3_M',x,w%2?0:.2,z,k*.75,ry)};
+ let wall=(x,z,big)=>{if(nIn(x,z,.4)||N.riv&&Math.abs(z-N.riv.Z(x))<N.riv.hw+1.2)return;if(big&&nIn(x-CYS*7,z-CYC*7,1.5))big=0;let w=RI(big?10:7),k=R(.85,1.3),ry=R(TAU);if(big&&w<4)put(TR[w],x,0,z,k,ry);else if(w<(big?7:5))put(act==2?'Rock_2_C':['Bush_2_D','Bush_4_D','Bush_1_D'][w%3],x,0,z,k,ry);else put(w%2?'Rock_1_J':'Rock_3_M',x,w%2?0:.2,z,k*.75,ry)};
  N.C.forEach(c=>{let n=Math.round(c.r*TAU/2);for(let j=0;j<n;j++){let a=j*TAU/n+R(.05),q=c.r+R(1.1,2.2);wall(c.x+Math.sin(a)*q,c.z+Math.cos(a)*q,1)}});
  for(let t of N.T){let a=N.C[t.a],b=N.C[t.b],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;for(let s=a.r*.7;s<L-b.r*.7;s+=2)for(let sd of[-1,1])wall(a.x+ux*s+uz*sd*(t.w+1.2),a.z+uz*s-ux*sd*(t.w+1.2),0)}
- for(let i=0;i<200;i++){let a=R(TAU),q=R(10,N.R+18),x=N.cx+Math.sin(a)*q,z=N.cz+Math.cos(a)*q;if(nIn(x,z,4)||nIn(x-CYS*10,z-CYC*10,6))continue;put(TR[RI(4)],x,0,z,R(1,1.6),R(TAU))}
+ for(let i=0;i<200;i++){let a=R(TAU),q=R(10,N.R+18),x=N.cx+Math.sin(a)*q,z=N.cz+Math.cos(a)*q;if(nIn(x,z,4)||nIn(x-CYS*10,z-CYC*10,6)||N.riv&&Math.abs(z-N.riv.Z(x))<N.riv.hw+2.5)continue;put(TR[RI(4)],x,0,z,R(1,1.6),R(TAU))}
  animeEnv(many,th);for(let nm in many)kkMany(nm,many[nm],/^(Tree|Bush)/.test(nm)?th.kt:/^Rock/.test(nm)?th.kr:0xffffff);
  if(fl<=2){let ct=cloudTex(),cl=own(new THREE.CircleGeometry(200,48),new THREE.MeshBasicMaterial({map:ct,blending:THREE.MultiplyBlending,transparent:true,depthWrite:false}));cl.userData.tex=1;cl.rotation.x=-Math.PI/2;cl.position.set(N.cx,.1,N.cz);cl.renderOrder=2;N.cloud=ct}
  // lantern posts at each chamber edge, away from the mouths
@@ -725,7 +745,7 @@ function chamberDone(i,remote){let c=NEST.C[i];if(c.st==2)return;c.st=2;NEST.loc
  if(c.t=='boss'){say('บอสด่านนี้สลายแล้ว');if(NEST.fl>=STAGES){if(!remote)later(2,()=>over(true))}else later(1.2,()=>{if(NEST&&!GATE.length&&mode!='over')exitGate(c)});return}
  say('โพรงนี้สงบแล้ว');pk('coin',c.x,c.z,8+RI(6));later(.9,()=>{if(mode=='play')choose(c.t=='elite'?1:0)})}
 function openChest(c){let h=c.chest;h.open=1;h.ring.visible=false;sfx('lvl');spark(h.x,1,h.z,30,0xffd34d,6);say('เปิดหีบสมบัติ');for(let k=0;k<4;k++)pk('coin',h.x+R(-2.2,2.2),h.z+R(-2.2,2.2),5+RI(5));pk(pick(['ammo','bomb','ice','pow']),h.x+R(-2,2),h.z+R(-2,2));if(Math.random()<.4)later(.7,()=>{if(mode=='play')choose(0)})}
-function nestTick(dt){if(!NEST)return;let N=NEST;if(N.cloud){N.cloud.offset.x+=dt*.004;N.cloud.offset.y+=dt*.0025}
+function nestTick(dt){if(!NEST)return;let N=NEST;if(N.cloud){N.cloud.offset.x+=dt*.004;N.cloud.offset.y+=dt*.0025}if(N.water)N.water.offset.y-=dt*.08;
  N.C.forEach((c,i)=>{if(!c.seen&&hyp(P,c)<c.r+.5)c.seen=1;if(c.seen&&!c.rv){c.rv=1;for(let t of N.T){if(t.a==i)N.C[t.b].rev=1;if(t.b==i)N.C[t.a].rev=1}}if(c.chest&&!c.chest.open&&hyp(P,c.chest)<2.4)openChest(c);if(c.sl)for(let g of c.sl)g.material.opacity=.4+Math.sin(T*5+g.position.x)*.12});
  if(NET.cl)return;
  if(N.lock<0){let ps=[P,...[...NET.R.values()].filter(m=>m.live&&!m.dn)].filter(q=>!q.down);N.C.forEach((c,i)=>{if(N.lock<0&&!c.st&&(c.t=='fight'||c.t=='elite'||c.t=='boss')&&ps.some(q=>hyp(q,c)<c.r-2.5))nestAct(i)})}

@@ -630,8 +630,8 @@ function heroModel(i){
    existing attack, emote and menu pose keeps working. Falls back to the built-in model when
    the files or loader are missing (file://, offline CDN). Meshy rigs are 1.7 m tall, facing +Z. */
 // GLBV: proportion variants per hero (menu toggle, remembered per browser); GLBH: the variant in use
-// chibi (2.5 head) rigs: the shared idle bows the big head about 17 degrees, and Meshy's run folds the short arms up to the chest. Local euler offsets (degrees) post-multiplied onto those clips' keys
-const A25={idle:{Head:[-15,0,0]},run:{LeftArm:[30,0,0],RightArm:[30,0,0],LeftForeArm:[-20,0,0],RightForeArm:[-20,0,0]}};
+// chibi (2.5 head) rigs: the shared idle bows the big head about 17 degrees, and Meshy's run pinches the short arms in front of the chest (spread them out to the sides). Local euler offsets (degrees) post-multiplied onto those clips' keys
+const A25={idle:{Head:[-15,0,0]},run:{LeftArm:[0,-25,0],RightArm:[0,25,0],LeftForeArm:[-25,0,0],RightForeArm:[-25,0,0]}};
 const GLBV={0:{def:'25',common:{wx:.28,ws:.8,wep:HW0,gun:1},opt:{
   '4':{n:'4 head',walk:'art/models/web/rocket-B-walk.json',run:'art/models/web/rocket-B-run.json',h:2.3},
   '35':{n:'3.5 head',walk:'art/models/web/rocket35-walk.json',run:'art/models/web/rocket35-run.json',h:2.2},'25':{n:'2.5 chibi',adj:A25,walk:'art/models/web/rocket25-walk.json',run:'art/models/web/rocket25-run.json',h:2.64}}}, 2:{def:'25',common:{wx:.2,ws:.8,grip:[0,0,0],hl:[-.7,0,0],palm:.08},opt:{'25':{n:'2.5 chibi',adj:A25,walk:'art/models/web/spin25-walk.json',run:'art/models/web/spin25-run.json',h:2.52}}},

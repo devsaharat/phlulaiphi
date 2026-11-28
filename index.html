@@ -571,6 +571,27 @@ function ghost(t,c){let F0,g=grp(),key='g'+t+(c||''),HY={kra:.3,pret:2.55,hang:.
 let G=null,S,P,E=[],BU=[],MINE=[],OB=[],GATE=[],DN=[],SW=[],Q=[],mode='menu',hero=0,hard=1,T=0,shake=0,stop_=0,room=null,SV={best:0,win:0};try{Object.assign(SV,JSON.parse(localStorage.getItem('phlu3d')||'{}'))}catch(e){}
 const later=(t,f)=>Q.push({t,f}),K={},M={x:0,y:0,l:false,r:false},TP={x:0,y:0};let touch=false,buf=null,bufT=0,heavyHeld=false;const AR=34;let JAR=[],PK=[],SHOP=null;
 const THEME=[{g:0x2a4a44,s:0x131c48,n:'ทุ่งนาร้าง',t:0x3f7d5a,d:'#8a7a52',l:[0xffb52e,0xffd98a,0xff8a3c],rim:0x86a8ff,kt:0xb9d8d0,kr:0xb4c0e0},{g:0x2b2f3d,s:0x191a2e,n:'ทางเจ็ดแพร่ง',t:0x4d5a5e,d:'#5f5a58',l:[0xffb52e,0xffd98a,0xfff1b8],rim:0xa9b4e0,kt:0x9fb0c4,kr:0xa6acc8},{g:0x4a3140,s:0x2b1226,n:'ลานเดือนดับ',t:0x80503f,d:'#94604e',l:[0xffc25a,0xff9a4d,0xfff1b8],rim:0xffa27a,kt:0xd0a090,kr:0xc49a98}];
+/* ---------- anime scenery ----------
+   Leafy trees, bushes and rocks of the nest are drawn as soft rounded shapes with a dark outline, like a painted anime
+   background: a tree is a trunk with four or five overlapping leaf blobs and a lighter top, a bush is two or three small
+   blobs, a rock is a squashed smooth boulder. All of it is instanced (one mesh per kind) so a whole stage costs a few draws.
+   Bare spooky trees keep their kit models. Clouds drift over the day stages as soft multiplied shadows on the ground. */
+let AGEO=null,AMAT=null,AOL=null;
+function animeEnv(many,th){if(!AGEO){AGEO={blob:new THREE.IcosahedronGeometry(1,2),rock:new THREE.IcosahedronGeometry(1,1),trunk:new THREE.CylinderGeometry(.13,.2,1,7)};AGEO.trunk.translate(0,.5,0);AMAT=LMAT({color:0xffffff,gradientMap:gm});AOL=new THREE.MeshBasicMaterial({color:0x1d1b26,side:THREE.BackSide})}
+ let kt=new THREE.Color(th.kt||0xffffff),kr=new THREE.Color(th.kr||0xffffff),col=(hx,t,v=.06)=>new THREE.Color(hx).multiply(t).multiplyScalar(1+R(-v,v)).getHex(),blobs=[],rocks=[],trunks=[],LEAF=[0x4d9442,0x58a24a,0x63ae50,0x478a3e],TOP=0x86c25e,BUSH=[0x3f8238,0x4b9142];
+ for(let nm in many){let L=many[nm];
+  if(/^Tree_\d/.test(nm)){for(let[x,,z,k]of L){k*=1.1;let lf=pick(LEAF),a0=R(TAU);trunks.push([x,0,z,k,k*2,k,R(TAU),0,col(0x7a4a2c,kt)]);blobs.push([x,2.35*k,z,1.2*k,1.05*k,1.2*k,R(TAU),0,col(lf,kt)]);
+    for(let i=0;i<3;i++){let a=a0+i*2.1,r=.8*k*R(.85,1.1);blobs.push([x+Math.sin(a)*.8*k,1.95*k+R(-.15,.15)*k,z+Math.cos(a)*.8*k,r,r*.9,r,R(TAU),0,col(lf,kt)])}
+    blobs.push([x-.25*k,2.95*k,z+.2*k,.62*k,.55*k,.62*k,0,0,col(TOP,kt,.04)])}delete many[nm]}
+  else if(/^Bush/.test(nm)){for(let[x,,z,k]of L){let n=2+RI(2),c=pick(BUSH);for(let i=0;i<n;i++){let r=R(.5,.75)*k;blobs.push([x+R(-.5,.5)*k,r*.65,z+R(-.5,.5)*k,r,r*.8,r,R(TAU),0,col(c,kt)])}}delete many[nm]}
+  else if(/^Rock/.test(nm)){for(let[x,,z,k]of L){let r=R(.75,1.15)*k;rocks.push([x,.2*r,z,r*1.1,r*.72,r*.95,R(TAU),R(-.15,.15),col(0xb9b8ae,kr,.05)])}delete many[nm]}}
+ let inst=(geo,L,ol)=>{if(!L.length)return;let m=new THREE.InstancedMesh(geo,AMAT,L.length),q=ol&&new THREE.InstancedMesh(geo,AOL,L.length),o=new THREE.Object3D(),c=new THREE.Color();
+  L.forEach((e,i)=>{o.position.set(e[0],e[1],e[2]);o.rotation.set(e[7],e[6],0);o.scale.set(e[3],e[4],e[5]);o.updateMatrix();m.setMatrixAt(i,o.matrix);m.setColorAt(i,c.setHex(e[8]));if(q){o.scale.set(e[3]+.07,e[4]+.07,e[5]+.07);o.updateMatrix();q.setMatrixAt(i,o.matrix)}});
+  m.castShadow=true;m.receiveShadow=true;m.frustumCulled=false;room.add(m);if(q){q.frustumCulled=false;room.add(q)}};
+ inst(AGEO.trunk,trunks,1);inst(AGEO.blob,blobs,1);inst(AGEO.rock,rocks,1)}
+function cloudTex(){let n=512,c=document.createElement('canvas');c.width=c.height=n;let x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,n,n);
+ for(let i=0;i<7;i++){let cx=R(n),cy=R(n),r=R(70,140);for(let ox of[-n,0,n])for(let oy of[-n,0,n]){let g=x.createRadialGradient(cx+ox,cy+oy,r*.2,cx+ox,cy+oy,r);g.addColorStop(0,'rgba(150,158,178,1)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.beginPath();x.ellipse(cx+ox,cy+oy,r*1.4,r,0,0,TAU);x.fill()}}
+ let t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,4);return t}
 /* ---------- time of day per stage ----------
    The night falls as the run goes on: stage 1 is a bright golden evening, 2 dusk, 3 night, 4 midnight under the red moon.
    Each entry overrides the act theme (sky s, grass g, dirt d, tree/rock tints kt/kr, rim) and sets the lights and fog. */
@@ -592,13 +613,14 @@ function grassTex(th,tm=1){let n=512,c=document.createElement('canvas');c.width=
  for(let i=0;i<30;i++){x.globalAlpha=.7;x.fillStyle=pick(['#9a9a92','#bdbdb4','#7e7e78']);x.beginPath();x.ellipse(R(6,n-6),R(6,n-6),R(2,5),R(2,3.5),R(3),0,TAU);x.fill()}
  let t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
 // a dirt path strip: packed earth with pebbles, a darker worn edge and a ragged border that fades into the grass
-function dirtTex(th){let w=256,hh=512,c=document.createElement('canvas');c.width=w;c.height=hh;let x=c.getContext('2d'),b=new THREE.Color(th.d),css=k=>'#'+b.clone().multiplyScalar(k).getHexString();
+function dirtTex(th,rim){let w=256,hh=512,c=document.createElement('canvas');c.width=w;c.height=hh;let x=c.getContext('2d'),b=new THREE.Color(th.d),css=k=>'#'+b.clone().multiplyScalar(k).getHexString();
+ if(rim){x.fillStyle=css(.6);x.fillRect(0,0,w,hh);for(let side of[0,1]){let e=[];for(let y=0;y<=hh;y+=8)e.push(6+Math.sin(y*.05+side*3)*5+R(-3,3));x.globalCompositeOperation='destination-out';x.beginPath();x.moveTo(side?w:0,0);e.forEach((v,i)=>x.lineTo(side?w-v:v,i*8));x.lineTo(side?w:0,hh);x.closePath();x.fill();x.globalCompositeOperation='source-over'}let t=new THREE.CanvasTexture(c);t.wrapT=THREE.RepeatWrapping;return t}
  x.fillStyle=css(1);x.fillRect(0,0,w,hh);for(let i=0;i<120;i++){x.globalAlpha=R(.15,.35);x.fillStyle=css(pick([.85,.92,1.1,1.18]));x.beginPath();x.ellipse(R(w),R(hh),R(10,40),R(8,30),R(3),0,TAU);x.fill()}
  for(let i=0;i<90;i++){x.globalAlpha=.8;x.fillStyle=pick([css(.7),css(1.3),'#c8c8c0']);x.beginPath();x.ellipse(R(24,w-24),R(hh),R(1.5,4),R(1.5,3),R(3),0,TAU);x.fill()}
  // ragged edges: erase a wobbly band on both sides, then draw the darker rim just inside it
  x.globalAlpha=1;for(let side of[0,1]){let e=[];for(let y=0;y<=hh;y+=8)e.push(14+Math.sin(y*.05+side*3)*6+R(-4,4));
   x.globalCompositeOperation='destination-out';x.beginPath();x.moveTo(side?w:0,0);e.forEach((v,i)=>x.lineTo(side?w-v:v,i*8));x.lineTo(side?w:0,hh);x.closePath();x.fill();
-  x.globalCompositeOperation='source-atop';x.strokeStyle=css(.66);x.lineWidth=7;x.beginPath();e.forEach((v,i)=>{let px=side?w-v-3:v+3;i?x.lineTo(px,i*8):x.moveTo(px,0)});x.stroke();x.globalCompositeOperation='source-over'}
+  x.globalCompositeOperation='source-over'}
  let t=new THREE.CanvasTexture(c);t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
 function groundTex(th){let n=1024,c=document.createElement('canvas');c.width=c.height=n;let x=c.getContext('2d'),b=new THREE.Color(th.g).multiplyScalar(1.4),css=k=>'#'+b.clone().multiplyScalar(k).getHexString(),pxy=t=>[n/2+Math.sin(t*9)*70*Math.sin(t*Math.PI),n*(1-t)];x.fillStyle=css(1);x.fillRect(0,0,n,n);
  for(let i=0;i<260;i++){x.globalAlpha=R(.1,.3);x.fillStyle=css(pick([.75,.85,1.15,1.28]));x.beginPath();x.ellipse(R(n),R(n),R(14,75),R(8,38),R(3),0,TAU);x.fill()}
@@ -672,14 +694,16 @@ function buildNest(fl){let act=Math.min(2,fl-1);
  // chamber floors share one painted texture; tunnels are a lighter packed-earth strip
  // chamber floors are lighter grass (the walkable meadow); tunnels are dirt paths that run on through the chambers
  let gIn=grassTex(th,1);N.C.forEach((c,i)=>{let tx=gIn.clone();tx.needsUpdate=true;let d=(c.r+.8)*2/20;tx.repeat.set(d,d);tx.offset.set(c.x/20%1,-c.z/20%1);let m=own(new THREE.CircleGeometry(c.r+.8,48),LMAT({map:tx,gradientMap:gm}));m.rotation.x=-Math.PI/2;m.position.set(c.x,.02,c.z);m.receiveShadow=true;m.userData.tex=1});
- let dtx=dirtTex(th);for(let t of N.T){let a=N.C[t.a],b=N.C[t.b],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),pw=t.w*1.15,pg=new THREE.PlaneGeometry(pw*2,L);pg.rotateX(-Math.PI/2);let tx=dtx.clone();tx.needsUpdate=true;tx.repeat.set(1,L/(pw*4));let m=own(pg,LMAT({map:tx,gradientMap:gm,transparent:true,alphaTest:.35}));m.rotation.y=Math.atan2(dx,dz);m.position.set((a.x+b.x)/2,.035,(a.z+b.z)/2);m.receiveShadow=true;m.renderOrder=1;m.userData.tex=1}
+ let dtx=dirtTex(th),rtx=dirtTex(th,1),pi0=0;for(let t of N.T){pi0++;let a=N.C[t.a],b=N.C[t.b],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),pw=t.w;
+  for(let layer of[0,1]){let w2=layer?pw*2:pw*2+.5,pg=new THREE.PlaneGeometry(w2,L+(layer?0:.5));pg.rotateX(-Math.PI/2);let tx=(layer?dtx:rtx).clone();tx.needsUpdate=true;tx.repeat.set(1,L/(pw*4));let m=own(pg,LMAT({map:tx,gradientMap:gm,transparent:true,alphaTest:.35}));m.rotation.y=Math.atan2(dx,dz);m.position.set((a.x+b.x)/2,layer?.045+pi0*.002:.03+pi0*.0008,(a.z+b.z)/2);m.receiveShadow=true;m.renderOrder=1;m.userData.tex=1}}
  // walls: trees, bushes and rocks ring every chamber except at tunnel mouths, and line both sides of every tunnel
  let many={},put=(nm,...v)=>(many[nm]=many[nm]||[]).push(v),TR=[['Tree_1_A','Tree_1_B','Tree_2_B','Tree_4_A'],['Tree_4_A','Tree_2_B','Tree_Bare_1_B','Tree_Bare_2_B'],['Tree_Bare_1_B','Tree_Bare_2_B','Tree_Bare_1_B','Tree_4_A']][act];
  let wall=(x,z,big)=>{if(nIn(x,z,.4))return;if(big&&nIn(x-CYS*7,z-CYC*7,1.5))big=0;let w=RI(big?10:7),k=R(.85,1.3),ry=R(TAU);if(big&&w<4)put(TR[w],x,0,z,k,ry);else if(w<(big?7:5))put(act==2?'Rock_2_C':['Bush_2_D','Bush_4_D','Bush_1_D'][w%3],x,0,z,k,ry);else put(w%2?'Rock_1_J':'Rock_3_M',x,w%2?0:.2,z,k*.75,ry)};
  N.C.forEach(c=>{let n=Math.round(c.r*TAU/2);for(let j=0;j<n;j++){let a=j*TAU/n+R(.05),q=c.r+R(1.1,2.2);wall(c.x+Math.sin(a)*q,c.z+Math.cos(a)*q,1)}});
  for(let t of N.T){let a=N.C[t.a],b=N.C[t.b],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;for(let s=a.r*.7;s<L-b.r*.7;s+=2)for(let sd of[-1,1])wall(a.x+ux*s+uz*sd*(t.w+1.2),a.z+uz*s-ux*sd*(t.w+1.2),0)}
  for(let i=0;i<200;i++){let a=R(TAU),q=R(10,N.R+18),x=N.cx+Math.sin(a)*q,z=N.cz+Math.cos(a)*q;if(nIn(x,z,4)||nIn(x-CYS*10,z-CYC*10,6))continue;put(TR[RI(4)],x,0,z,R(1,1.6),R(TAU))}
- for(let nm in many)kkMany(nm,many[nm],/^(Tree|Bush)/.test(nm)?th.kt:/^Rock/.test(nm)?th.kr:0xffffff);
+ animeEnv(many,th);for(let nm in many)kkMany(nm,many[nm],/^(Tree|Bush)/.test(nm)?th.kt:/^Rock/.test(nm)?th.kr:0xffffff);
+ if(fl<=2){let ct=cloudTex(),cl=own(new THREE.CircleGeometry(200,48),new THREE.MeshBasicMaterial({map:ct,blending:THREE.MultiplyBlending,transparent:true,depthWrite:false}));cl.userData.tex=1;cl.rotation.x=-Math.PI/2;cl.position.set(N.cx,.1,N.cz);cl.renderOrder=2;N.cloud=ct}
  // lantern posts at each chamber edge, away from the mouths
  N.C.forEach((c,ci)=>{for(let j=0;j<6;j++){let a=j*TAU/6+.4,x=c.x+Math.sin(a)*(c.r+.3),z=c.z+Math.cos(a)*(c.r+.3);if(N.T.some(t=>{if(t.a!==ci&&t.b!==ci)return false;let o=N.C[t.a===ci?t.b:t.a];return Math.abs(adiff(a,Math.atan2(o.x-c.x,o.z-c.z)))<(t.w+2)/c.r}))continue;mk(room,'c',0x6b3b2a,x,1.2,z,.1,2.4,.1);mk(room,'s',th.l[j%3],x,2.5,z,.28,.36,.28,{glow:1})}});
  JAR=[];PK=[];SHOP=null;
@@ -701,7 +725,7 @@ function chamberDone(i,remote){let c=NEST.C[i];if(c.st==2)return;c.st=2;NEST.loc
  if(c.t=='boss'){say('บอสด่านนี้สลายแล้ว');if(NEST.fl>=STAGES){if(!remote)later(2,()=>over(true))}else later(1.2,()=>{if(NEST&&!GATE.length&&mode!='over')exitGate(c)});return}
  say('โพรงนี้สงบแล้ว');pk('coin',c.x,c.z,8+RI(6));later(.9,()=>{if(mode=='play')choose(c.t=='elite'?1:0)})}
 function openChest(c){let h=c.chest;h.open=1;h.ring.visible=false;sfx('lvl');spark(h.x,1,h.z,30,0xffd34d,6);say('เปิดหีบสมบัติ');for(let k=0;k<4;k++)pk('coin',h.x+R(-2.2,2.2),h.z+R(-2.2,2.2),5+RI(5));pk(pick(['ammo','bomb','ice','pow']),h.x+R(-2,2),h.z+R(-2,2));if(Math.random()<.4)later(.7,()=>{if(mode=='play')choose(0)})}
-function nestTick(dt){if(!NEST)return;let N=NEST;
+function nestTick(dt){if(!NEST)return;let N=NEST;if(N.cloud){N.cloud.offset.x+=dt*.004;N.cloud.offset.y+=dt*.0025}
  N.C.forEach((c,i)=>{if(!c.seen&&hyp(P,c)<c.r+.5)c.seen=1;if(c.seen&&!c.rv){c.rv=1;for(let t of N.T){if(t.a==i)N.C[t.b].rev=1;if(t.b==i)N.C[t.a].rev=1}}if(c.chest&&!c.chest.open&&hyp(P,c.chest)<2.4)openChest(c);if(c.sl)for(let g of c.sl)g.material.opacity=.4+Math.sin(T*5+g.position.x)*.12});
  if(NET.cl)return;
  if(N.lock<0){let ps=[P,...[...NET.R.values()].filter(m=>m.live&&!m.dn)].filter(q=>!q.down);N.C.forEach((c,i)=>{if(N.lock<0&&!c.st&&(c.t=='fight'||c.t=='elite'||c.t=='boss')&&ps.some(q=>hyp(q,c)<c.r-2.5))nestAct(i)})}
@@ -1105,7 +1129,7 @@ function step(dt){T+=dt;G.time+=dt;for(let q of Q)q.t-=dt;let due=Q.filter(q=>q.
  nestTick(dt);
  gateTick(dt)}
 let lt=performance.now(),mt=0,cx=0,cz=0;function frame(n){let dt=clamp((n-lt)/1000,0,.034);lt=n;music();if(NET.room)netTick(n);if(G&&G.go)goTick();if(live()){if(stop_>0&&!NET.on)stop_-=dt;else step(dt);if(NET.on){remotes(dt);if(!P.act&&mode=='play')emPose(P.g.userData,NET.em)}}else{T+=dt;if(mode=='menu'){scarf(P.g.userData,1.5,0,dt);P.g.userData.b.position.y=Math.sin(T*2.4)*.03;P.g.userData.hd.rotation.z=Math.sin(T*1.3)*.08;P.g.rotation.y=Math.sin(T*.7)*.6;mt-=dt;if(mt<0){mt=.5;spark(R(-18,18),R(6,13),R(-22,-8),60,pick(COL),8,1.4,3)}}}parts(dt);glbTick(dt);aimTick();fxUp(dt);for(let b of bl){b.t-=dt;b.intensity=b.t>0?b.i*b.t/.35:0}shake*=Math.pow(.01,dt);
- let k=1-Math.pow(.001,dt);cx+=(P.x-cx)*k;cz+=(P.z-cz)*k;let sh=calm?0:shake*.5;if(mode=='menu'){{let w=vw>=700&&vw/vh>=1.1;cam.position.set(Math.sin(T*.2)*.6,3,w?12.6:13.8);cam.lookAt(0,1.5,4);cam.setViewOffset(vw,vh,w?-vw*.25:0,w?0:vh*.22,vw,vh)}}else{if(cam.view&&cam.view.enabled)cam.clearViewOffset();cam.position.set(cx+CYS*12.6+R(-sh,sh),13.8+R(-sh,sh),cz+CYC*12.6);cam.lookAt(cx-CYS*.6,1.1+P.y*.15,cz-CYC*.6)}sun.position.set(cx+10,24,cz+8);sun.target.position.set(cx,0,cz);OLM.uniforms.res.value.set(vw,vh);OLM.uniforms.fc.value.copy(sc.fog.color);TIME.value=T;decoUp();PP.draw();overlay(dt);hud();requestAnimationFrame(frame)}
+ let k=1-Math.pow(.001,dt);cx+=(P.x-cx)*k;cz+=(P.z-cz)*k;let sh=calm?0:shake*.5;if(mode=='menu'){{let w=vw>=700&&vw/vh>=1.1;cam.position.set(Math.sin(T*.2)*.6,3,w?12.6:13.8);cam.lookAt(0,1.5,4);cam.setViewOffset(vw,vh,w?-vw*.25:0,w?0:vh*.22,vw,vh)}}else{if(cam.view&&cam.view.enabled)cam.clearViewOffset();cam.position.set(cx+CYS*10.6+R(-sh,sh),15.6+R(-sh,sh),cz+CYC*10.6);cam.lookAt(cx-CYS*.6,1.1+P.y*.15,cz-CYC*.6)}sun.position.set(cx+10,24,cz+8);sun.target.position.set(cx,0,cz);OLM.uniforms.res.value.set(vw,vh);OLM.uniforms.fc.value.copy(sc.fog.color);TIME.value=T;decoUp();PP.draw();overlay(dt);hud();requestAnimationFrame(frame)}
 const KEEP=new Set(sc.children);applyQ();cv.style.cursor='crosshair';
 (function preload(){let L=[...HERO.map((h,i)=>[h.n,()=>heroModel(i)]),...Object.keys(ET).map(k=>[ET[k].n,()=>ghost(k)]),...BOSS.map(b=>[b.n,()=>ghost(b.m,b.c)])],n=L.length+1,k=0,tmp=new THREE.Group();sc.add(tmp);
  let set=t=>{let q=Math.round(k/n*100);$('#ldT').textContent=t;$('#ldB i').style.width=q+'%';$('#ldB').setAttribute('aria-valuenow',q);$('#ldN').textContent=k+' / '+n};

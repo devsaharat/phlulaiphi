@@ -859,9 +859,9 @@ const THEME=[{g:0x2a4a44,s:0x131c48,n:'ทุ่งนาร้าง',t:0x3f7d5
    background: a tree is a trunk with four or five overlapping leaf blobs and a lighter top, a bush is two or three small
    blobs, a rock is a squashed smooth boulder. All of it is instanced (one mesh per kind) so a whole stage costs a few draws.
    Bare spooky trees keep their kit models. Clouds drift over the day stages as soft multiplied shadows on the ground. */
-let AGEO=null,AMAT=null,AOL=null;
+let AGEO=null,AMAT=null,AOL=null;const PALE=new THREE.Color(0xe8f2d4);
 function animeEnv(many,th,painted){if(!AGEO){AGEO={blob:new THREE.IcosahedronGeometry(1,2),paintedCrown:inkCanopy(1,1,1,2),rock:new THREE.IcosahedronGeometry(1,1),trunk:new THREE.CylinderGeometry(.13,.2,1,7)};AGEO.trunk.translate(0,.5,0);AMAT=LMAT({color:0xffffff,gradientMap:gm});AGEO.leafMat=INK_STUDY?LMAT({color:0xffffff,gradientMap:gm,map:inkSurface('leaf')}):AMAT;AOL=new THREE.MeshBasicMaterial({color:0x303b31,side:THREE.BackSide})}
- let kt=new THREE.Color(th.kt||0xffffff),kr=new THREE.Color(th.kr||0xffffff),col=(hx,t,v=.06)=>new THREE.Color(hx).multiply(t).multiplyScalar(1+R(-v,v)).getHex(),blobs=[],rocks=[],trunks=[],tallCrowns=[],tallTrunks=[],paintedLeaves=[0x61906a,0x658e65,0x759469,0x547d63],LEAF=[0x59804b,0x66914e,0x74964d,0x517d51],TOP=0x8ba762,BUSH=[0x4f7e52,0x668752];
+ let kt=new THREE.Color(th.kt||0xffffff),kr=new THREE.Color(th.kr||0xffffff),col=(hx,t,v=.06,p=th.leaf||0)=>new THREE.Color(hx).multiply(t).lerp(PALE,p).multiplyScalar(1+R(-v,v)).getHex(),blobs=[],rocks=[],trunks=[],tallCrowns=[],tallTrunks=[],paintedLeaves=[0x61906a,0x658e65,0x759469,0x547d63],LEAF=[0x59804b,0x66914e,0x74964d,0x517d51],TOP=0x8ba762,BUSH=[0x4f7e52,0x668752];
  for(let nm in many){let L=many[nm];
   if(nm==='Tree_9_Forest'){
    for(const [x,,z,w,a,height] of L){
@@ -886,7 +886,7 @@ function animeEnv(many,th,painted){if(!AGEO){AGEO={blob:new THREE.IcosahedronGeo
     for(let i=0;i<3;i++){let a=a0+i*2.1,r=.8*k*R(.85,1.1);blobs.push([x+Math.sin(a)*.8*k,1.95*k+R(-.15,.15)*k,z+Math.cos(a)*.8*k,r*1.13,r*(painted?.71:.82),r,R(TAU),0,col(lf,kt)])}
     blobs.push([x-.25*k,2.95*k,z+.2*k,.62*k,.55*k,.62*k,0,0,col(painted?0x7fa273:TOP,kt,.04)])}delete many[nm]}
   else if(/^Bush/.test(nm)){for(let[x,,z,k]of L){let n=2+RI(2),c=pick(BUSH);for(let i=0;i<n;i++){let r=R(.5,.75)*k;blobs.push([x+R(-.5,.5)*k,r*.65,z+R(-.5,.5)*k,r,r*.8,r,R(TAU),0,col(c,kt)])}}delete many[nm]}
-  else if(/^Rock/.test(nm)){for(let[x,,z,k]of L){let r=R(.75,1.15)*k;rocks.push([x,.2*r,z,r*1.1,r*.72,r*.95,R(TAU),R(-.15,.15),col(0xb9b8ae,kr,.05)])}delete many[nm]}}
+  else if(/^Rock/.test(nm)){for(let[x,,z,k]of L){let r=R(.75,1.15)*k;rocks.push([x,.2*r,z,r*1.1,r*.72,r*.95,R(TAU),R(-.15,.15),col(0xb9b8ae,kr,.05,0)])}delete many[nm]}}
  let inst=(geo,L,ol,name)=>{if(!L.length)return;let m=new THREE.InstancedMesh(geo,geo===AGEO.paintedCrown?AGEO.leafMat:AMAT,L.length),q=ol&&new THREE.InstancedMesh(geo,AOL,L.length),o=new THREE.Object3D(),c=new THREE.Color();
   L.forEach((e,i)=>{o.position.set(e[0],e[1],e[2]);o.rotation.set(e[7],e[6],0);o.scale.set(e[3],e[4],e[5]);o.updateMatrix();m.setMatrixAt(i,o.matrix);m.setColorAt(i,c.setHex(e[8]));if(q){o.scale.set(e[3]+.034,e[4]+.034,e[5]+.034);o.updateMatrix();q.setMatrixAt(i,o.matrix)}});
   if(name)m.name=name;
@@ -904,7 +904,7 @@ function cloudTex(){let n=512,c=document.createElement('canvas');c.width=c.heigh
    The night falls as the run goes on: stage 1 is a bright golden evening, 2 dusk, 3 night, 4 midnight under the red moon.
    Each entry overrides the act theme (sky s, grass g, dirt d, tree/rock tints kt/kr, rim) and sets the lights and fog. */
 const TOD=[null,
- {ink:[.76,.82,.88],s:0xbfe0e8,g:0x7fa877,d:'#c9ab84',kt:0xd6e2cc,kr:0xdcd8cc,rim:0xf4ead2,water:0xf4fbff,hemi:[0xeef5f0,0x748c78,.56],sun:[0xfff2e0,.7],lamp:.2,fog:[56,140],moon:0xfff8e0,dark:.8,pl:.1,vg:.12},
+ {ink:[.76,.82,.88],s:0xbfe0e8,g:0x7fa877,d:'#c9ab84',kt:0xd6e2cc,kr:0xdcd8cc,rim:0xf4ead2,water:0xf4fbff,hemi:[0xeef5f0,0x748c78,.56],sun:[0xfff2e0,.7],lamp:.2,fog:[56,140],moon:0xfff8e0,dark:.8,pl:.1,vg:.12,leaf:.32},
  {ink:[.69,.65,.83],s:0xc58274,g:0x667b56,d:'#b68f72',kt:0xd4c7af,kr:0xc8b5ae,rim:0xddad83,water:0xe4bba7,hemi:[0xffdcbf,0x655665,.56],sun:[0xffb77d,.72],lamp:.6,fog:[42,105],moon:0xffc070,dark:.64},
  {ink:[.45,.65,.79],s:0x223755,g:0x3b615d,d:'#857f71',water:0x748eaf,hemi:[0x9dbce3,0x394557,.68],sun:[0xd2e0fb,.60],lamp:.85,fog:[34,88],moon:0xfff1c8,dark:.66},
  {ink:[.67,.51,.73],s:0x422941,g:0x594355,d:'#916d6a',water:0x9b7d9a,hemi:[0xc098c4,0x4e344f,.63],sun:[0xf2b1a8,.54],lamp:1,fog:[32,84],moon:0xff7a4d,dark:.64}];

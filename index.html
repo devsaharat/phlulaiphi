@@ -632,17 +632,30 @@ function heroModel(i){
 // GLBV: proportion variants per hero (menu toggle, remembered per browser); GLBH: the variant in use
 // chibi (2.5 head) rigs: the shared idle bows the big head about 17 degrees, and Meshy's run pinches the short arms in front of the chest (spread them out to the sides). Local euler offsets (degrees) post-multiplied onto those clips' keys
 const A25={idle:{Head:[-15,0,0]},run:{LeftArm:[0,-25,0],RightArm:[0,25,0],LeftForeArm:[-25,0,0],RightForeArm:[-25,0,0]}};
+// run arms by weapon (2.5 models): the free arm keeps A25's spread swing, the weapon arm is steadied and placed for what it carries
+// ROCKET: left hand up at the shoulder steadying the launcher (the launcher itself moves to the shoulder in glbGun). WOK: wok low at the hip like a shield.
+// SPIN: disc hanging at the left side. SHADOW: lantern staff upright at the right side, lantern above the head. FAN: arms out at the waist, both fans opened outward like a dancer.
+const R25={0:{LeftArm:[90,-15,60,.1],LeftForeArm:[30,0,0,.1]},1:{LeftArm:[60,-60,0,.1],LeftForeArm:[-30,0,0,.1]},2:{LeftArm:[60,-15,15,.12],LeftForeArm:[-30,0,0,.12],LeftHand:[-90,-45,45,.2]},
+ 8:{RightArm:[-60,30,45,.12],RightForeArm:[0,0,0,.12],RightHand:[30,0,0,.2]},9:{LeftArm:[0,0,15,.15],LeftForeArm:[-105,0,0,.15],RightArm:[-15,0,-15,.15],RightForeArm:[-120,0,0,.15],LeftHand:[-150,30,60,.2],RightHand:[30,60,0,.2]}},
+ A25H=i=>({idle:A25.idle,run:Object.assign({},A25.run,R25[i]),hold:R25[i]});
 const GLBV={0:{def:'25',common:{wx:.28,ws:.8,wep:HW0,gun:1},opt:{
   '4':{n:'4 head',walk:'art/models/web/rocket-B-walk.json',run:'art/models/web/rocket-B-run.json',h:2.3},
-  '35':{n:'3.5 head',walk:'art/models/web/rocket35-walk.json',run:'art/models/web/rocket35-run.json',h:2.2},'25':{n:'2.5 chibi',adj:A25,walk:'art/models/web/rocket25-walk.json',run:'art/models/web/rocket25-run.json',h:2.64}}}, 2:{def:'25',common:{wx:.2,ws:.8,grip:[0,0,0],hl:[-.7,0,0],palm:.08},opt:{'25':{n:'2.5 chibi',adj:A25,walk:'art/models/web/spin25-walk.json',run:'art/models/web/spin25-run.json',h:2.52}}},
+  '35':{n:'3.5 head',walk:'art/models/web/rocket35-walk.json',run:'art/models/web/rocket35-run.json',h:2.2},'25':{n:'2.5 chibi',adj:A25H(0),rh:1,walk:'art/models/web/rocket25-walk.json',run:'art/models/web/rocket25-run.json',h:2.64}}}, 2:{def:'25',common:{wx:.2,ws:.8,grip:[0,0,0],hl:[-.7,0,0],palm:.08},opt:{'25':{n:'2.5 chibi',adj:A25H(2),rh:1,walk:'art/models/web/spin25-walk.json',run:'art/models/web/spin25-run.json',h:2.52}}},
  // wk = cached weapon mesh of the built-in hero (old heroes 'hw'+i, new heroes 'nw'+i), reused on the Meshy model's weapon arm
  // melee heroes hold their weapon in the hand bone: grip = point on the weapon mesh that sits in the palm, hl/hr = forearm bend while holding, wk2 = weapon in the right hand
- 1:{def:'25',common:{wx:.2,ws:.8,wk:'hw1',grip:[0,-.25,.3],hl:[-.7,0,0],palm:.08,pose:wokPose},opt:{'35':{n:'3.5 head',walk:'art/models/web/wok35b-walk.json',run:'art/models/web/wok35b-run.json',h:2.1},'25':{n:'2.5 chibi',adj:A25,walk:'art/models/web/wok25-walk.json',run:'art/models/web/wok25-run.json',h:2.52}}},
- 8:{def:'25',common:{wx:.2,ws:1,wk:'nw8',wr:1,pose:shadowPose,grip:[0,0,0],hr:[-.8,0,0],palm:.06,wglb:'art/models/web/shadow-staff.json',wh:2.4,wgy:.4,wly:.66},opt:{'35':{n:'3.5 head',walk:'art/models/web/shadow35-walk.json',run:'art/models/web/shadow35-run.json',h:2.6,lit:1.35},'25':{n:'2.5 chibi',adj:A25,walk:'art/models/web/shadow25-walk.json',run:'art/models/web/shadow25-run.json',h:2.76,lit:1.35}}},
- 9:{def:'25',common:{wx:.2,ws:.6,wk:'nw9',grip:[0,-.25,.12],hl:[-.9,0,0],wk2:'nw9',hr:[-.9,0,0],palm:.08,pose:fanPose},opt:{'35':{n:'3.5 head',walk:'art/models/web/fan35-walk.json',run:'art/models/web/fan35-run.json',h:2.15},'25':{n:'2.5 chibi',adj:A25,walk:'art/models/web/fan25-walk.json',run:'art/models/web/fan25-run.json',h:2.52}}}},GLBH={},GLBL=[];
+ 1:{def:'25',common:{wx:.2,ws:.8,wk:'hw1',grip:[0,-.25,.3],hl:[-.7,0,0],palm:.08,pose:wokPose},opt:{'35':{n:'3.5 head',walk:'art/models/web/wok35b-walk.json',run:'art/models/web/wok35b-run.json',h:2.1},'25':{n:'2.5 chibi',adj:A25H(1),rh:1,walk:'art/models/web/wok25-walk.json',run:'art/models/web/wok25-run.json',h:2.52}}},
+ 8:{def:'25',common:{wx:.2,ws:1,wk:'nw8',wr:1,pose:shadowPose,grip:[0,0,0],hr:[-.8,0,0],palm:.06,wglb:'art/models/web/shadow-staff.json',wh:2.4,wgy:.4,wly:.66},opt:{'35':{n:'3.5 head',walk:'art/models/web/shadow35-walk.json',run:'art/models/web/shadow35-run.json',h:2.6,lit:1.35},'25':{n:'2.5 chibi',adj:A25H(8),rh:1,walk:'art/models/web/shadow25-walk.json',run:'art/models/web/shadow25-run.json',h:2.76,lit:1.35}}},
+ 9:{def:'25',common:{wx:.2,ws:.6,wk:'nw9',grip:[0,-.25,.12],hl:[-.9,0,0],wk2:'nw9',hr:[-.9,0,0],palm:.08,pose:fanPose},opt:{'35':{n:'3.5 head',walk:'art/models/web/fan35-walk.json',run:'art/models/web/fan35-run.json',h:2.15},'25':{n:'2.5 chibi',adj:A25H(9),rh:1,walk:'art/models/web/fan25-walk.json',run:'art/models/web/fan25-run.json',h:2.52}}}},GLBH={},GLBL=[];
 function glbUse(i,k){let V=GLBV[i];if(!V.opt[k])k=V.def;V.sel=k;try{localStorage.setItem('phluGLB25'+i,k)}catch(e){}GLBH[i]=Object.assign(V.opt[k],V.common);glbLoad(i)}
 const OLS=new THREE.MeshBasicMaterial({color:0x080a18,side:THREE.BackSide,skinning:true});OLS.onBeforeCompile=s=>{s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed+=normalize(normal)*.0105;')};
-function glbAdj(c,a){if(!a)return;let D=Math.PI/180,q=new THREE.Quaternion();c.tracks=c.tracks.map(t=>{let e=a[t.name.split('.')[0]];if(!e||!t.name.endsWith('.quaternion'))return t;t=t.clone();let o=new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0]*D,e[1]*D,e[2]*D));for(let i=0;i<t.values.length;i+=4)q.fromArray(t.values,i).multiply(o).toArray(t.values,i);return t})}
+// a[bone] = [x,y,z(deg), keep]: local euler offset post-multiplied onto every key; keep < 1 shrinks the swing toward the clip's average pose (a steady weapon arm)
+function glbAdj(c,a){if(!a)return;let D=Math.PI/180,q=new THREE.Quaternion(),m=new THREE.Quaternion();c.tracks=c.tracks.map(t=>{if(!t.name.endsWith('.quaternion'))return t;if(!t.v0){t=t.clone();t.v0=t.values.slice()}let e=a[t.name.split('.')[0]],v=t.values;v.set(t.v0);if(!e)return t;let k=e[3]===undefined?1:e[3];
+ if(k<1){let s=[0,0,0,0];for(let i=0;i<v.length;i+=4){let g=v[i]*v[0]+v[i+1]*v[1]+v[i+2]*v[2]+v[i+3]*v[3]<0?-1:1;for(let j=0;j<4;j++)s[j]+=v[i+j]*g}m.fromArray(s).normalize()}
+ let o=new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0]*D,e[1]*D,e[2]*D));for(let i=0;i<v.length;i+=4){q.fromArray(v,i);if(k<1)q.copy(m.clone().slerp(q,k));q.multiply(o).toArray(v,i)}return t})}
+// walk uses the run's held weapon-arm pose (offsets were solved on the run clip), keeping the same small share of its own swing
+function glbHold(w,r,a){if(!a)return;let q=new THREE.Quaternion();w.tracks=w.tracks.map(t=>{let b=t.name.split('.')[0],e=a[b];if(!e||!t.name.endsWith('.quaternion'))return t;let rt=r.tracks.find(k=>k.name==t.name);if(!rt)return t;if(!t.v0){t=t.clone();t.v0=t.values.slice()}
+ let v=rt.values,s=[0,0,0,0];for(let i=0;i<v.length;i+=4){let g=v[i]*v[0]+v[i+1]*v[1]+v[i+2]*v[2]+v[i+3]*v[3]<0?-1:1;for(let j=0;j<4;j++)s[j]+=v[i+j]*g}let m=new THREE.Quaternion().fromArray(s).normalize(),k=e[3]===undefined?1:e[3];
+ for(let i=0;i<t.values.length;i+=4)m.clone().slerp(q.fromArray(t.v0,i),k).toArray(t.values,i);return t})}
 function glbClip(c,name){let t=c.tracks.filter(k=>k.name.endsWith('.quaternion')||k.name=='Hips.position').map(k=>{if(k.name!='Hips.position')return k;k=k.clone();let v=k.values;for(let j=0;j<v.length;j+=3){v[j]=v[0];v[j+2]=v[2]}return k});return new THREE.AnimationClip(name,c.duration,t)}
 function glbPose(c,t){return new THREE.AnimationClip('idle',1,c.tracks.map(k=>{let v=k.createInterpolant().evaluate(t);return new k.constructor(k.name,[0],Array.from(v))}))}
 // one shared Meshy idle (Idle_02) for every GLB hero: all Meshy rigs use the same bone names, so rotation tracks transfer
@@ -652,7 +665,7 @@ function glbLoad(i){let d=GLBH[i];if(!d||d.ok||d.busy||!THREE.GLTFLoader||!THREE
   let m=THREE.SkeletonUtils.clone(d.src),mx=new THREE.AnimationMixer(m),a=mx.clipAction(d.walkC).play(),bo={};m.traverse(o=>{if(o.isBone)bo[o.name]=o});let best=0,bd=1e9,v=new THREE.Vector3(),u=new THREE.Vector3();
   for(let t=0;t<d.walkC.duration;t+=.02){a.time=t;mx.update(0);m.updateMatrixWorld(true);let q=Math.abs(bo.LeftFoot.getWorldPosition(v).z-bo.RightFoot.getWorldPosition(u).z);if(q<bd){bd=q;best=t}}
   d.idleC=ij&&ij.animations[0]?new THREE.AnimationClip('idle',ij.animations[0].duration,ij.animations[0].tracks.filter(k=>k.name.endsWith('.quaternion'))):glbPose(d.walkC,best);m.traverse(o=>{if(o.isSkinnedMesh&&!d.mat){let s=o.material;if(s.map)s.map.encoding=THREE.LinearEncoding;d.mat=rim(LMAT({map:s.map||null,color:s.map?new THREE.Color(1,1,1).multiplyScalar(d.lit||1):s.color,gradientMap:gm,skinning:true}))}});
-  if(d.adj){glbAdj(d.idleC,d.adj.idle);glbAdj(d.runC,d.adj.run)}d.ok=1;if(typeof mode!='undefined'&&mode=='menu'&&hero==i&&GLBH[i]===d&&!$('#ldT')){portrait(i);menu()}}).catch(e=>console.warn('GLB hero '+i+' unavailable, using built-in model',e))}}
+  if(d.adj){glbAdj(d.idleC,d.adj.idle);glbAdj(d.runC,d.adj.run);glbHold(d.walkC,d.runC,d.adj.hold)}d.ok=1;if(typeof mode!='undefined'&&mode=='menu'&&hero==i&&GLBH[i]===d&&!$('#ldT')){portrait(i);menu()}}).catch(e=>console.warn('GLB hero '+i+' unavailable, using built-in model',e))}}
 // For models whose shoes Meshy built back to front (first WOK try had its clogs reversed; set flipFeet:1 on the hero). Turns every shoe vertex 180° around its ankle
 // in the bind pose and bind it rigidly to the foot bone (clogs do not bend at the toes). Geometry is shared by all clones.
 function glbFlipFeet(src){src.updateMatrixWorld(true);src.traverse(o=>{if(!o.isSkinnedMesh)return;let G=o.geometry,P0=G.attributes.position,N=G.attributes.normal,SI=G.attributes.skinIndex,SW=G.attributes.skinWeight,B=o.skeleton.bones,ix=n=>B.findIndex(b=>b.name==n);
@@ -749,8 +762,9 @@ function glbGun(e,u,dt,a){let md=a?GMODE[a.n]||null:null;
  if(md){e.gm=md;e.gt=md=="hip"?.35:.5}else if((e.gt-=dt)<=0)e.gm=null;let tw=e.gm?1:0;e.gw+=(tw-e.gw)*(1-Math.exp(-dt*(tw?24:8)));let w=e.gw,M=e.gm||e.lm||'hip';if(e.gm)e.lm=e.gm;
  let t0=a&&a.ev&&a.ev[0]?a.ev[0][0]:.005,kick=a&&(md=="hip"||md=="sh")&&a.n!="charge"&&a.t>=t0?Math.exp(-(a.t-t0)*(M=='sh'?12:30))*(a.n=='heavy'?1.6:.5):0,sk=a&&a.n=='charge'?Math.sin(T*60)*.02*Math.min(1,a.c||0):0;
  let F=e.pv.F,Q=e.pv[{sh:"S",hip:"H",ride:"R",sky:"S"}[M]],rx={hip:-.04-.06*kick,sh:-.04-.28*kick+sk,ride:0,sky:a&&a.n=="ult"?-1.5:-1.25}[M],bob=Math.sin(T*2.6)*.06*(1-w);
- e.arm.position.set(F.x+(Q.x-F.x)*w,F.y+bob+(Q.y-F.y)*w,F.z+(Q.z-F.z-.12*kick)*w);
- e.arm.rotation.set((.18+Math.sin(T*1.7)*.04)*(1-w)+rx*w,0,-.08*(1-w)+sk*w);
+ let S0=e.pv.S,cr=e.d.rh?(e.mv||0)*(1-w):0,fx=F.x+(S0.x-F.x)*cr,fy=F.y+(S0.y-F.y)*cr,fz=F.z+(S0.z-F.z)*cr;bob*=1-cr*.6;
+ e.arm.position.set(fx+(Q.x-fx)*w,fy+bob+(Q.y-fy)*w,fz+(Q.z-fz-.12*kick)*w);
+ e.arm.rotation.set((.18+Math.sin(T*1.7)*.04)*(1-w)*(1-cr)-.04*cr*(1-w)+rx*w,0,-.08*(1-w)*(1-cr)+sk*w);
  let L=(o,x,y,z)=>{o.rotation.x+=(x-o.rotation.x)*w;o.rotation.y+=(y-o.rotation.y)*w;o.rotation.z+=(z-o.rotation.z)*w};
  L(u.b,M=="ride"?.15:-.04*kick,0,0);u.b.position.z=-.1*kick*w;L(u.hd,.05,0,0);
  for(let n in e.rest2)e.bo[n].quaternion.slerp(e.rest2[n],w);e.g.updateMatrixWorld(true);glbBend(e,e.bo.Head,u.hd.rotation,1);
@@ -779,10 +793,10 @@ function glbBend(e,bone,rot,w){if(!bone||w<=0)return;let m=e.m,bs=e.base.get(bon
 function glbTick(dt){for(let j=GLBL.length-1;j>=0;j--){let e=GLBL[j],g=e.g;if(g.parent!==sc){if(e.on||!g.parent)GLBL.splice(j,1);continue}e.on=1;if(dt<=0)continue;
  let p=g.position,v=e.px?Math.hypot(p.x-e.px.x,p.z-e.px.z)/dt:0;e.px=p.clone();e.sp+=(Math.min(v,20)-e.sp)*(1-Math.exp(-dt*12));
  let air=p.y>.3,mv=air?0:clamp(e.sp/2,0,1),rn=mv*clamp((e.sp-3)/2.5,0,1),idle=1-mv,u=g.userData;
- e.A.idle.setEffectiveWeight(idle);e.A.walk.setEffectiveWeight(mv-rn);e.A.run.setEffectiveWeight(rn);e.A.walk.timeScale=clamp(e.sp/3,.7,1.1);e.A.run.timeScale=clamp(e.sp/8.5,.65,1);
+ e.A.idle.setEffectiveWeight(idle);e.A.walk.setEffectiveWeight(mv-rn);e.A.run.setEffectiveWeight(rn);e.rn=rn;e.mv=mv;e.A.walk.timeScale=clamp(e.sp/3,.7,1.1);e.A.run.timeScale=clamp(e.sp/8.5,.65,1);
  for(let[bn,q]of e.base)bn.quaternion.copy(q);e.base.clear();e.mx.update(dt);
  if(e.d.gun)glbGun(e,u,dt,g===P.g?P.act:null);
- else{for(let n in e.rest)e.bo[n].quaternion.slerp(e.rest[n],.55);g.updateMatrixWorld(true);glbBend(e,e.bo.Head,u.hd.rotation,1);if(!e.d.wr)glbBend(e,e.bo.LeftArm,u.arm.rotation,1);glbBend(e,e.bo.RightArm,u.off.rotation,air?1:idle);
+ else{for(let n in e.rest)e.bo[n].quaternion.slerp(e.rest[n],.55*(1-(e.d.rh?mv:0)));g.updateMatrixWorld(true);glbBend(e,e.bo.Head,u.hd.rotation,1);if(!e.d.wr)glbBend(e,e.bo.LeftArm,u.arm.rotation,1);glbBend(e,e.bo.RightArm,u.off.rotation,air?1:idle);
   if(e.d.hl){GZ.set(...e.d.hl);glbBend(e,e.bo.LeftForeArm,GZ,1)}if(e.d.hr){GZ.set(...e.d.hr);glbBend(e,e.bo.RightForeArm,GZ,1)}
   if(e.d.pose&&g===P.g)e.d.pose(e,dt,P.act)}
  glbBend(e,e.bo.RightUpLeg,u.legs[0].rotation,air?1:idle);glbBend(e,e.bo.LeftUpLeg,u.legs[1].rotation,air?1:idle)}}

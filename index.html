@@ -258,7 +258,7 @@ let RS="anime";try{RS=localStorage.getItem("phlu3d-rs")||"anime"}catch(e){}const
 // painted as a cool tinted version of the surface colour instead of plain darkening. Applied before fog so distance still fades.
 const ANIME=`float aL=dot(outgoingLight,vec3(.333))/max(dot(diffuseColor.rgb,vec3(.333)),.001);gl_FragColor.rgb=mix(diffuseColor.rgb*mix(vec3(.62,.6,.86),paintedShadow,paintedLook),gl_FragColor.rgb*mix(1.06,.94,paintedLook),smoothstep(.5,.6,aL));
 #include <tonemapping_fragment>`;
-const PAINTED_LOOK={value:0},PAINTED_SHADOW={value:new V3(.64,.74,.79)};
+const PASTEL={value:0},VIG={value:.4},PAINTED_LOOK={value:0},PAINTED_SHADOW={value:new V3(.64,.74,.79)};
 function animeSh(sh){sh.uniforms.paintedLook=PAINTED_LOOK;sh.uniforms.paintedShadow=PAINTED_SHADOW;sh.fragmentShader='uniform float paintedLook;\nuniform vec3 paintedShadow;\n'+sh.fragmentShader.replace('#include <tonemapping_fragment>',ANIME)}
 const LMAT=o=>{if(AN){let m=new THREE.MeshToonMaterial(Object.assign({},o,o.gradientMap?{gradientMap:gmA}:{}));m.onBeforeCompile=animeSh;return m}if(RS!="pbr")return new THREE.MeshToonMaterial(o);let p=Object.assign({roughness:.78,metalness:0,envMapIntensity:.28},o);delete p.gradientMap;return new THREE.MeshStandardMaterial(p)};
 function toggleRS(){RS=RS=="toon"?"anime":RS=="anime"?"sketch":RS=="sketch"?"pbr":"toon";try{localStorage.setItem("phlu3d-rs",RS)}catch(e){}location.reload()}
@@ -308,7 +308,7 @@ vec3 sketch(vec3 c){vec2 o=1./res;float c0=ld(v),l=ld(v-vec2(o.x,0.)),r=ld(v+vec
  float cE=smoothstep(.16,.3,abs(lu(v-vec2(o.x,0.))-lu(v+vec2(o.x,0.)))+abs(lu(v-vec2(0.,o.y))-lu(v+vec2(0.,o.y))));
  float e=max(dE,cE*.6),bt=floor(tm*6.),bn=.6*vn(vec3(v*res/22.,bt*.37))+.4*vn(vec3(v*res/9.,bt*.53+5.));e*=step(.3,bn)*(1.-smoothstep(30.,70.,c0));
  return mix(c,vec3(.1,.11,.14),e*.82);}`:'';
- let co=M(Object.assign({t:{value:null},a:{value:null},b:{value:null}},SK?{dt:{value:null},res:{value:new THREE.Vector2()},tm:{value:0}}:{}),'uniform sampler2D t,a,b;'+SKF+'void main(){vec3 c=texture2D(t,v).rgb;'+(SK?'c=sketch(c);':'')+'c+=texture2D(a,v).rgb*.28+texture2D(b,v).rgb*.36;float l=dot(c,vec3(.3,.59,.11));c=mix(vec3(l),c,1.12);c=mix(c*vec3(.9,.97,1.1),c*vec3(1.05,1.,.94),smoothstep(.15,.75,l));vec2 p=v-.5;c*=1.-smoothstep(.35,.85,length(p))*.4;gl_FragColor=vec4(c,1.);}');
+ let co=M(Object.assign({t:{value:null},a:{value:null},b:{value:null},pl:PASTEL,vg:VIG},SK?{dt:{value:null},res:{value:new THREE.Vector2()},tm:{value:0}}:{}),'uniform sampler2D t,a,b;uniform float pl,vg;'+SKF+'void main(){vec3 c=texture2D(t,v).rgb;'+(SK?'c=sketch(c);':'')+'c+=texture2D(a,v).rgb*.28+texture2D(b,v).rgb*.36;float l=dot(c,vec3(.3,.59,.11));c=mix(vec3(l),c,1.12);c=mix(c*vec3(.9,.97,1.1),c*vec3(1.05,1.,.94),smoothstep(.15,.75,l));c=mix(c,vec3(.98,.97,.94),pl);vec2 p=v-.5;c*=1.-smoothstep(.35,.85,length(p))*vg;gl_FragColor=vec4(c,1.);}');
 
  let pass=(m,to)=>{q.material=m;ren.setRenderTarget(to);ren.render(qs,qc)};
  return{size(){let w=Math.max(8,ren.domElement.width),h=Math.max(8,ren.domElement.height);main.setSize(w,h);[2,4].forEach((d,i)=>A[i].forEach(t=>t.setSize(w/d|0,h/d|0)))},
@@ -904,11 +904,11 @@ function cloudTex(){let n=512,c=document.createElement('canvas');c.width=c.heigh
    The night falls as the run goes on: stage 1 is a bright golden evening, 2 dusk, 3 night, 4 midnight under the red moon.
    Each entry overrides the act theme (sky s, grass g, dirt d, tree/rock tints kt/kr, rim) and sets the lights and fog. */
 const TOD=[null,
- {ink:[.64,.74,.79],s:0x8dbfc1,g:0x6c895d,d:'#c2a277',kt:0xc2cfbf,kr:0xd0ccc1,rim:0xb9c6a9,water:0xffffff,hemi:[0xdfede9,0x5e7268,.55],sun:[0xffecd3,.77],lamp:.25,fog:[48,120],moon:0xfff8e0,dark:.66},
+ {ink:[.76,.82,.88],s:0xbfe0e8,g:0x7fa877,d:'#c9ab84',kt:0xd6e2cc,kr:0xdcd8cc,rim:0xf4ead2,water:0xf4fbff,hemi:[0xeef5f0,0x748c78,.56],sun:[0xfff2e0,.7],lamp:.2,fog:[56,140],moon:0xfff8e0,dark:.8,pl:.1,vg:.12},
  {ink:[.69,.65,.83],s:0xc58274,g:0x667b56,d:'#b68f72',kt:0xd4c7af,kr:0xc8b5ae,rim:0xddad83,water:0xe4bba7,hemi:[0xffdcbf,0x655665,.56],sun:[0xffb77d,.72],lamp:.6,fog:[42,105],moon:0xffc070,dark:.64},
  {ink:[.45,.65,.79],s:0x223755,g:0x3b615d,d:'#857f71',water:0x748eaf,hemi:[0x9dbce3,0x394557,.68],sun:[0xd2e0fb,.60],lamp:.85,fog:[34,88],moon:0xfff1c8,dark:.66},
  {ink:[.67,.51,.73],s:0x422941,g:0x594355,d:'#916d6a',water:0x9b7d9a,hemi:[0xc098c4,0x4e344f,.63],sun:[0xf2b1a8,.54],lamp:1,fog:[32,84],moon:0xff7a4d,dark:.64}];
-function todLights(t){PAINTED_LOOK.value=t.ink?1:0;if(t.ink)PAINTED_SHADOW.value.set(...t.ink);hemi.color.setHex(t.hemi[0]);hemi.groundColor.setHex(t.hemi[1]);hemi.intensity=t.hemi[2];sun.color.setHex(t.sun[0]);sun.intensity=t.sun[1];lamp.intensity=t.lamp;sc.fog.near=t.fog[0];sc.fog.far=t.fog[1]}
+function todLights(t){PASTEL.value=t.pl||0;VIG.value=t.vg==null?.4:t.vg;PAINTED_LOOK.value=t.ink?1:0;if(t.ink)PAINTED_SHADOW.value.set(...t.ink);hemi.color.setHex(t.hemi[0]);hemi.groundColor.setHex(t.hemi[1]);hemi.intensity=t.hemi[2];sun.color.setHex(t.sun[0]);sun.intensity=t.sun[1];lamp.intensity=t.lamp;sc.fog.near=t.fog[0];sc.fog.far=t.fog[1]}
 const NIGHT={hemi:[0x8fa4ff,0x2c2440,.6],sun:[0xcdd8ff,.5],lamp:.85,fog:[32,85]};
 // painted grass that tiles: soft patches of lighter and darker green, short strokes, a few flowers and pebbles, and the
 // large faint shadows of passing clouds; tm darkens it (dense grass outside the walkable area)

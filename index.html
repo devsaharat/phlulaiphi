@@ -83,7 +83,7 @@ const COL=[0xffb52e,0xff5470,0x4fe0b5,0x6fb7ff,0xd58bff,0xfff1b8],calm=matchMedi
 /* ---------- quality ---------- */
 let gq=matchMedia('(pointer: coarse)').matches?'low':'high';try{gq=localStorage.getItem('phlu3d-gq')||gq}catch(e){}
 // render look: "toon" (stepped cel light) or "pbr" (soft physically based light + night-sky environment). Every lit material goes through LMAT.
-let RS="toon";try{RS=localStorage.getItem("phlu3d-rs")||"toon"}catch(e){}const rsName=()=>RS=="pbr"?"นุ่ม (PBR)":RS=="anime"?"อนิเมะ":"การ์ตูน";
+let RS="anime";try{RS=localStorage.getItem("phlu3d-rs")||"anime"}catch(e){}const rsName=()=>RS=="pbr"?"นุ่ม (PBR)":RS=="anime"?"อนิเมะ":"การ์ตูน";
 // Anime look, after the ideas of pixiv's MToon shader (three-vrm, MIT): a two-step light ramp with a hard edge, and shadows
 // painted as a cool tinted version of the surface colour instead of plain darkening. Applied before fog so distance still fades.
 const ANIME=`float aL=dot(outgoingLight,vec3(.333))/max(dot(diffuseColor.rgb,vec3(.333)),.001);gl_FragColor.rgb=mix(diffuseColor.rgb*vec3(.62,.6,.86),gl_FragColor.rgb*1.06,smoothstep(.5,.6,aL));
@@ -571,6 +571,35 @@ function ghost(t,c){let F0,g=grp(),key='g'+t+(c||''),HY={kra:.3,pret:2.55,hang:.
 let G=null,S,P,E=[],BU=[],MINE=[],OB=[],GATE=[],DN=[],SW=[],Q=[],mode='menu',hero=0,hard=1,T=0,shake=0,stop_=0,room=null,SV={best:0,win:0};try{Object.assign(SV,JSON.parse(localStorage.getItem('phlu3d')||'{}'))}catch(e){}
 const later=(t,f)=>Q.push({t,f}),K={},M={x:0,y:0,l:false,r:false},TP={x:0,y:0};let touch=false,buf=null,bufT=0,heavyHeld=false;const AR=34;let JAR=[],PK=[],SHOP=null;
 const THEME=[{g:0x2a4a44,s:0x131c48,n:'ทุ่งนาร้าง',t:0x3f7d5a,d:'#8a7a52',l:[0xffb52e,0xffd98a,0xff8a3c],rim:0x86a8ff,kt:0xb9d8d0,kr:0xb4c0e0},{g:0x2b2f3d,s:0x191a2e,n:'ทางเจ็ดแพร่ง',t:0x4d5a5e,d:'#5f5a58',l:[0xffb52e,0xffd98a,0xfff1b8],rim:0xa9b4e0,kt:0x9fb0c4,kr:0xa6acc8},{g:0x4a3140,s:0x2b1226,n:'ลานเดือนดับ',t:0x80503f,d:'#94604e',l:[0xffc25a,0xff9a4d,0xfff1b8],rim:0xffa27a,kt:0xd0a090,kr:0xc49a98}];
+/* ---------- time of day per stage ----------
+   The night falls as the run goes on: stage 1 is a bright golden evening, 2 dusk, 3 night, 4 midnight under the red moon.
+   Each entry overrides the act theme (sky s, grass g, dirt d, tree/rock tints kt/kr, rim) and sets the lights and fog. */
+const TOD=[null,
+ {s:0x9fcdee,g:0x4f9a3c,d:'#b98049',kt:0xdfe8d4,kr:0xc9c9c0,rim:0xfff1c8,hemi:[0xf4f8ff,0x4e6a34,.7],sun:[0xfff0d2,.85],lamp:.25,fog:[48,120],moon:0xfff8e0,dark:.66},
+ {s:0xd98a66,g:0x3f7438,d:'#9a6744',kt:0xe8c8b4,kr:0xb8a49c,rim:0xffb070,hemi:[0xffd2ac,0x40343e,.6],sun:[0xffa462,.78],lamp:.6,fog:[42,105],moon:0xffc070,dark:.64},
+ {s:0x16214f,g:0x2f5d4b,d:'#7d6c4c',hemi:[0x8fa4ff,0x2c2440,.72],sun:[0xcdd8ff,.58],lamp:.85,fog:[34,88],moon:0xfff1c8,dark:.66},
+ {s:0x2b1226,g:0x4a3140,d:'#94604e',hemi:[0xb48cff,0x2c1430,.66],sun:[0xffb4a0,.5],lamp:1,fog:[32,84],moon:0xff7a4d,dark:.64}];
+function todLights(t){hemi.color.setHex(t.hemi[0]);hemi.groundColor.setHex(t.hemi[1]);hemi.intensity=t.hemi[2];sun.color.setHex(t.sun[0]);sun.intensity=t.sun[1];lamp.intensity=t.lamp;sc.fog.near=t.fog[0];sc.fog.far=t.fog[1]}
+const NIGHT={hemi:[0x8fa4ff,0x2c2440,.6],sun:[0xcdd8ff,.5],lamp:.85,fog:[32,85]};
+// painted grass that tiles: soft patches of lighter and darker green, short strokes, a few flowers and pebbles, and the
+// large faint shadows of passing clouds; tm darkens it (dense grass outside the walkable area)
+function grassTex(th,tm=1){let n=512,c=document.createElement('canvas');c.width=c.height=n;let x=c.getContext('2d'),b=new THREE.Color(th.g).multiplyScalar(tm),css=k=>'#'+b.clone().multiplyScalar(k).getHexString(),wrap=(f)=>{for(let ox of[-n,0,n])for(let oy of[-n,0,n])f(ox,oy)};
+ x.fillStyle=css(1);x.fillRect(0,0,n,n);
+ for(let i=0;i<70;i++){let cx=R(n),cy=R(n),rx=R(30,110),ry=R(20,70),k=pick([.86,.92,1.08,1.16]),a=R(3);wrap((ox,oy)=>{x.globalAlpha=R(.25,.45);x.fillStyle=css(k);x.beginPath();x.ellipse(cx+ox,cy+oy,rx,ry,a,0,TAU);x.fill()})}
+ for(let i=0;i<6;i++){let cx=R(n),cy=R(n),rx=R(90,170),ry=R(60,120),a=R(3);wrap((ox,oy)=>{x.globalAlpha=.1;x.fillStyle=css(.62);x.beginPath();x.ellipse(cx+ox,cy+oy,rx,ry,a,0,TAU);x.fill()})}
+ x.lineWidth=2;for(let i=0;i<1400;i++){let a=R(n),y=R(n);x.globalAlpha=R(.25,.5);x.strokeStyle=css(pick([.72,.8,1.22,1.32]));x.beginPath();x.moveTo(a,y);x.lineTo(a+R(-3,3),y-R(4,10));x.stroke()}
+ for(let i=0;i<40;i++){x.globalAlpha=.9;x.fillStyle=pick(['#fff6e0','#ffe066','#ff9ec4','#9fc8ff']);let a=R(8,n-8),y=R(8,n-8);for(let j=0;j<3;j++){x.beginPath();x.arc(a+R(-5,5),y+R(-5,5),2.2,0,TAU);x.fill()}}
+ for(let i=0;i<30;i++){x.globalAlpha=.7;x.fillStyle=pick(['#9a9a92','#bdbdb4','#7e7e78']);x.beginPath();x.ellipse(R(6,n-6),R(6,n-6),R(2,5),R(2,3.5),R(3),0,TAU);x.fill()}
+ let t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
+// a dirt path strip: packed earth with pebbles, a darker worn edge and a ragged border that fades into the grass
+function dirtTex(th){let w=256,hh=512,c=document.createElement('canvas');c.width=w;c.height=hh;let x=c.getContext('2d'),b=new THREE.Color(th.d),css=k=>'#'+b.clone().multiplyScalar(k).getHexString();
+ x.fillStyle=css(1);x.fillRect(0,0,w,hh);for(let i=0;i<120;i++){x.globalAlpha=R(.15,.35);x.fillStyle=css(pick([.85,.92,1.1,1.18]));x.beginPath();x.ellipse(R(w),R(hh),R(10,40),R(8,30),R(3),0,TAU);x.fill()}
+ for(let i=0;i<90;i++){x.globalAlpha=.8;x.fillStyle=pick([css(.7),css(1.3),'#c8c8c0']);x.beginPath();x.ellipse(R(24,w-24),R(hh),R(1.5,4),R(1.5,3),R(3),0,TAU);x.fill()}
+ // ragged edges: erase a wobbly band on both sides, then draw the darker rim just inside it
+ x.globalAlpha=1;for(let side of[0,1]){let e=[];for(let y=0;y<=hh;y+=8)e.push(14+Math.sin(y*.05+side*3)*6+R(-4,4));
+  x.globalCompositeOperation='destination-out';x.beginPath();x.moveTo(side?w:0,0);e.forEach((v,i)=>x.lineTo(side?w-v:v,i*8));x.lineTo(side?w:0,hh);x.closePath();x.fill();
+  x.globalCompositeOperation='source-atop';x.strokeStyle=css(.66);x.lineWidth=7;x.beginPath();e.forEach((v,i)=>{let px=side?w-v-3:v+3;i?x.lineTo(px,i*8):x.moveTo(px,0)});x.stroke();x.globalCompositeOperation='source-over'}
+ let t=new THREE.CanvasTexture(c);t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t}
 function groundTex(th){let n=1024,c=document.createElement('canvas');c.width=c.height=n;let x=c.getContext('2d'),b=new THREE.Color(th.g).multiplyScalar(1.4),css=k=>'#'+b.clone().multiplyScalar(k).getHexString(),pxy=t=>[n/2+Math.sin(t*9)*70*Math.sin(t*Math.PI),n*(1-t)];x.fillStyle=css(1);x.fillRect(0,0,n,n);
  for(let i=0;i<260;i++){x.globalAlpha=R(.1,.3);x.fillStyle=css(pick([.75,.85,1.15,1.28]));x.beginPath();x.ellipse(R(n),R(n),R(14,75),R(8,38),R(3),0,TAU);x.fill()}
  for(let k=0;k<3;k++){x.globalAlpha=[.22,.4,.4][k];x.fillStyle=[th.d,th.d,css(1.25)][k];for(let i=0;i<=230;i++){let[a,y]=pxy(i/230);x.globalAlpha=[.06,.1,.03][k];x.beginPath();x.arc(a+R(-6,6),y,[62,44,22][k]+R(-8,8),0,TAU);x.fill()}}
@@ -586,7 +615,7 @@ function deco(th){let own=o=>{o.userData.own=1;room.add(o);return o},o3=new THRE
  let fly=pts2(90,()=>{if(NEST){let[x,z]=nrand();return[x,R(.5,2.6),z]}let a=R(TAU),q=AR*Math.sqrt(R());return[Math.sin(a)*q,R(.5,2.6),Math.cos(a)*q]},.32,0xe9ff8a,true),base=fly.geometry.attributes.position.array.slice();pts2(160,()=>[R(-90,90),R(14,60),R(-95,-60)],.6,0xdfe6ff,false);
  DECO={grass:gr,soft,mist,fly,base};gr.count=gq=='high'?1800:500;soft.visible=gq=='high'}
 function decoUp(){if(!DECO||gq=='low'||calm)return;for(let m of DECO.mist){m.position.x=(m.userData.x0===undefined?m.userData.x0=m.position.x:m.userData.x0)+Math.sin(T*.12*m.userData.v+m.position.z)*5}let a=DECO.fly.geometry.attributes.position,b=DECO.base;for(let i=0;i<90;i++){a.array[i*3]=b[i*3]+Math.sin(T*.6+i)*1.3;a.array[i*3+1]=b[i*3+1]+Math.sin(T*1.1+i*2)*.5;a.array[i*3+2]=b[i*3+2]+Math.cos(T*.5+i*1.7)*1.3}a.needsUpdate=true}
-function build(act){NEST=null;if(room){sc.remove(room);room.traverse(o=>{if(o.userData.kin&&o.dispose)o.dispose();if(o.userData.own){o.geometry.dispose();if(o.userData.tex)o.material.map.dispose();o.material.dispose()}})}room=new THREE.Group();sc.add(room);OB=[];let th=THEME[act];sc.background.setHex(th.s);sc.fog.color.setHex(th.s);
+function build(act){NEST=null;if(room){sc.remove(room);room.traverse(o=>{if(o.userData.kin&&o.dispose)o.dispose();if(o.userData.own){o.geometry.dispose();if(o.userData.tex)o.material.map.dispose();o.material.dispose()}})}room=new THREE.Group();sc.add(room);OB=[];let th=THEME[act];sc.background.setHex(th.s);sc.fog.color.setHex(th.s);todLights(NIGHT);
  let own=(g,m)=>{let q=new THREE.Mesh(g,m);q.userData.own=1;room.add(q);return q};let gr=own(new THREE.CircleGeometry(120,48),LMAT({color:th.g,gradientMap:gm}));gr.rotation.x=-Math.PI/2;gr.receiveShadow=true;
  let ar=own(new THREE.CircleGeometry(AR+1,64),LMAT({map:groundTex(th),gradientMap:gm}));ar.rotation.x=-Math.PI/2;ar.position.y=.02;ar.userData.tex=1;RIM.value.setHex(th.rim);ar.receiveShadow=true;
  let moon=own(new THREE.SphereGeometry(6,24,16),new THREE.MeshBasicMaterial({color:act==2?0xff7a4d:0xfff1c8,fog:false}));moon.position.set(30,26,-80);
@@ -636,14 +665,14 @@ function nrand(){let N=NEST;if(R()<.78){let c=N.C[RI(N.C.length)],a=R(TAU),q=(c.
 function placeShop(x,z){let o={x,z},g=grp();g.position.set(o.x,0,o.z);room.add(g);kk(g,'table_long_tablecloth',0,0,.4,.86,Math.PI/2,{sy:1.05});mk(g,'b',0xd94a6a,0,2.9,.2,4,.25,2.4);for(let k of[-1,1])for(let j of[-1,1])mk(g,'c',0x6b3b2a,k*1.7,1.4,.2+j,.1,2.8,.1);kk(g,'plate_food_A',-1.15,1.05,.45,.75,.4);kk(g,'bottle_A_labeled_green',-.35,1.05,.4,.8);kk(g,'bottle_C_brown',.2,1.05,.5,.65);kk(g,'trunk_small_A',.85,1.05,.4,.75,.2);kk(g,'candle_triple',1.45,1.05,.35,.7);kk(g,'keg',-2.7,0,-.2,.75,.5);kk(g,'crates_stacked',2.8,0,-.5,.75,-.3);kk(g,'coin_stack_small',1.2,1.05,.75,.5);kk(g,'Wood_Planks_Stack_Small',2.6,0,1.1,.9,.5);mk(g,'s',0xe0a878,0,1.8,-.7,.4);mk(g,'k',0xd9b25e,0,2.3,-.7,.6,.4,.6);mk(g,'s',0xffb52e,0,3.6,.2,.35,.35,.35,{glow:1});OB.push({x:o.x,z:o.z,r:1.9});SHOP={x:o.x,z:o.z,st:stock()}}
 function buildNest(fl){let act=Math.min(2,fl-1);
  if(room){sc.remove(room);room.traverse(o=>{if(o.userData.kin&&o.dispose)o.dispose();if(o.userData.own){o.geometry.dispose();if(o.userData.tex)o.material.map.dispose();o.material.dispose()}})}
- room=new THREE.Group();sc.add(room);OB=[];NEST=nestGen(fl);let N=NEST,th=THEME[act];sc.background.setHex(th.s);sc.fog.color.setHex(th.s);RIM.value.setHex(th.rim);
+ room=new THREE.Group();sc.add(room);OB=[];NEST=nestGen(fl);let N=NEST,tod=TOD[Math.min(4,fl)],th=Object.assign({},THEME[act],tod);sc.background.setHex(th.s);sc.fog.color.setHex(th.s);RIM.value.setHex(th.rim);todLights(tod);
  let own=(g,m)=>{let q=new THREE.Mesh(g,m);q.userData.own=1;room.add(q);return q};
- let gr=own(new THREE.CircleGeometry(200,48),LMAT({color:new THREE.Color(th.g).multiplyScalar(.5).getHex(),gradientMap:gm}));gr.rotation.x=-Math.PI/2;gr.position.set(N.cx,0,N.cz);gr.receiveShadow=true;
- let moon=own(new THREE.SphereGeometry(6,24,16),new THREE.MeshBasicMaterial({color:act==2?0xff7a4d:0xfff1c8,fog:false}));moon.position.set(30,26,N.cz-80);
+ let gOut=grassTex(th,th.dark);gOut.repeat.set(20,20);let gr=own(new THREE.CircleGeometry(200,48),LMAT({map:gOut,gradientMap:gm}));gr.userData.tex=1;gr.rotation.x=-Math.PI/2;gr.position.set(N.cx,0,N.cz);gr.receiveShadow=true;
+ let moon=own(new THREE.SphereGeometry(6,24,16),new THREE.MeshBasicMaterial({color:th.moon,fog:false}));moon.position.set(30,26,N.cz-80);moon.visible=fl>=3;
  // chamber floors share one painted texture; tunnels are a lighter packed-earth strip
- let tex=groundTex(th),fm=LMAT({map:tex,gradientMap:gm}),tm2=LMAT({color:new THREE.Color(th.g).multiplyScalar(1.3).getHex(),gradientMap:gm});
- N.C.forEach((c,i)=>{let m=own(new THREE.CircleGeometry(c.r+.8,48),fm);m.rotation.x=-Math.PI/2;m.position.set(c.x,.02,c.z);m.receiveShadow=true;if(!i)m.userData.tex=1});
- for(let t of N.T){let a=N.C[t.a],b=N.C[t.b],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),pg=new THREE.PlaneGeometry(t.w*2+.8,L);pg.rotateX(-Math.PI/2);let m=own(pg,tm2);m.rotation.y=Math.atan2(dx,dz);m.position.set((a.x+b.x)/2,.015,(a.z+b.z)/2);m.receiveShadow=true}
+ // chamber floors are lighter grass (the walkable meadow); tunnels are dirt paths that run on through the chambers
+ let gIn=grassTex(th,1);N.C.forEach((c,i)=>{let tx=gIn.clone();tx.needsUpdate=true;let d=(c.r+.8)*2/20;tx.repeat.set(d,d);tx.offset.set(c.x/20%1,-c.z/20%1);let m=own(new THREE.CircleGeometry(c.r+.8,48),LMAT({map:tx,gradientMap:gm}));m.rotation.x=-Math.PI/2;m.position.set(c.x,.02,c.z);m.receiveShadow=true;m.userData.tex=1});
+ let dtx=dirtTex(th);for(let t of N.T){let a=N.C[t.a],b=N.C[t.b],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),pw=t.w*1.15,pg=new THREE.PlaneGeometry(pw*2,L);pg.rotateX(-Math.PI/2);let tx=dtx.clone();tx.needsUpdate=true;tx.repeat.set(1,L/(pw*4));let m=own(pg,LMAT({map:tx,gradientMap:gm,transparent:true,alphaTest:.35}));m.rotation.y=Math.atan2(dx,dz);m.position.set((a.x+b.x)/2,.035,(a.z+b.z)/2);m.receiveShadow=true;m.renderOrder=1;m.userData.tex=1}
  // walls: trees, bushes and rocks ring every chamber except at tunnel mouths, and line both sides of every tunnel
  let many={},put=(nm,...v)=>(many[nm]=many[nm]||[]).push(v),TR=[['Tree_1_A','Tree_1_B','Tree_2_B','Tree_4_A'],['Tree_4_A','Tree_2_B','Tree_Bare_1_B','Tree_Bare_2_B'],['Tree_Bare_1_B','Tree_Bare_2_B','Tree_Bare_1_B','Tree_4_A']][act];
  let wall=(x,z,big)=>{if(nIn(x,z,.4))return;if(big&&nIn(x-CYS*7,z-CYC*7,1.5))big=0;let w=RI(big?10:7),k=R(.85,1.3),ry=R(TAU);if(big&&w<4)put(TR[w],x,0,z,k,ry);else if(w<(big?7:5))put(act==2?'Rock_2_C':['Bush_2_D','Bush_4_D','Bush_1_D'][w%3],x,0,z,k,ry);else put(w%2?'Rock_1_J':'Rock_3_M',x,w%2?0:.2,z,k*.75,ry)};

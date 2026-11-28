@@ -657,8 +657,10 @@ function glbONorm(src){src.traverse(o=>{if(!o.isSkinnedMesh)return;let G=o.geome
 const gmH=new THREE.DataTexture(new Uint8Array([150,150,150,205,205,205,255,255,255]),3,1,THREE.RGBFormat);gmH.minFilter=gmH.magFilter=THREE.NearestFilter;gmH.needsUpdate=true;
 // a[bone] = [x,y,z(deg), keep]: local euler offset post-multiplied onto every key; keep < 1 shrinks the swing toward the clip's average pose (a steady weapon arm)
 function glbAdj(c,a){if(!a)return;let D=Math.PI/180,q=new THREE.Quaternion(),m=new THREE.Quaternion();c.tracks=c.tracks.map(t=>{if(!t.name.endsWith('.quaternion'))return t;if(!t.v0){t=t.clone();t.v0=t.values.slice()}let e=a[t.name.split('.')[0]],v=t.values;v.set(t.v0);if(!e)return t;let k=e[3]===undefined?1:e[3];
- if(k<1){let s=[0,0,0,0];for(let i=0;i<v.length;i+=4){let g=v[i]*v[0]+v[i+1]*v[1]+v[i+2]*v[2]+v[i+3]*v[3]<0?-1:1;for(let j=0;j<4;j++)s[j]+=v[i+j]*g}m.fromArray(s).normalize()}
- let o=new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0]*D,e[1]*D,e[2]*D));for(let i=0;i<v.length;i+=4){q.fromArray(v,i);if(k<1)q.copy(m.clone().slerp(q,k));q.multiply(o).toArray(v,i)}return t})}
+ if(k!=1){let s=[0,0,0,0];for(let i=0;i<v.length;i+=4){let g=v[i]*v[0]+v[i+1]*v[1]+v[i+2]*v[2]+v[i+3]*v[3]<0?-1:1;for(let j=0;j<4;j++)s[j]+=v[i+j]*g}m.fromArray(s).normalize()}
+ // e[4..6] (optional): a rotation in the parent bone's frame, pre-multiplied, so a preset can swing the whole limb in body terms (Rig Studio presets)
+ let o=new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0]*D,e[1]*D,e[2]*D)),pr=e.length>4?new THREE.Quaternion().setFromEuler(new THREE.Euler((e[4]||0)*D,(e[5]||0)*D,(e[6]||0)*D)):null;
+ for(let i=0;i<v.length;i+=4){q.fromArray(v,i);if(k!=1)q.copy(m.clone().slerp(q,k));q.multiply(o);if(pr)q.premultiply(pr);q.toArray(v,i)}return t})}
 // walk uses the run's held weapon-arm pose (offsets were solved on the run clip), keeping the same small share of its own swing
 function glbHold(w,r,a){if(!a)return;let q=new THREE.Quaternion();w.tracks=w.tracks.map(t=>{let b=t.name.split('.')[0],e=a[b];if(!e||!t.name.endsWith('.quaternion'))return t;let rt=r.tracks.find(k=>k.name==t.name);if(!rt)return t;if(!t.v0){t=t.clone();t.v0=t.values.slice()}
  let v=rt.values,s=[0,0,0,0];for(let i=0;i<v.length;i+=4){let g=v[i]*v[0]+v[i+1]*v[1]+v[i+2]*v[2]+v[i+3]*v[3]<0?-1:1;for(let j=0;j<4;j++)s[j]+=v[i+j]*g}let m=new THREE.Quaternion().fromArray(s).normalize(),k=e[3]===undefined?1:e[3];
@@ -799,9 +801,9 @@ function glbBend(e,bone,rot,w){if(!bone||w<=0)return;let m=e.m,bs=e.base.get(bon
  bw.premultiply(rw.clone().invert()).premultiply(dq).premultiply(rw);bone.quaternion.copy(pw.invert().multiply(bw));bone.updateMatrixWorld(true)}
 function glbTick(dt){for(let j=GLBL.length-1;j>=0;j--){let e=GLBL[j],g=e.g;if(g.parent!==sc){if(e.on||!g.parent)GLBL.splice(j,1);continue}e.on=1;if(dt<=0)continue;
  let p=g.position,v=e.px?Math.hypot(p.x-e.px.x,p.z-e.px.z)/dt:0;e.px=p.clone();e.sp+=(Math.min(v,20)-e.sp)*(1-Math.exp(-dt*12));
- let air=p.y>.3,mv=air?0:clamp(e.sp/2,0,1),rn=mv*clamp((e.sp-3)/2.5,0,1),idle=1-mv,u=g.userData;if(TOOL&&TOOL.anim&&g===P.g){mv=TOOL.anim=='idle'?0:1;rn=TOOL.anim=='run'?1:0;idle=1-mv;air=false}
+ let air=p.y>.3,mv=air?0:clamp(e.sp/2,0,1),rn=mv*clamp((e.sp-3)/2.5,0,1),idle=1-mv,u=g.userData;if(TOOL&&TOOL.anim&&g===P.g){mv=TOOL.anim=='idle'||TOOL.anim=='bind'?0:1;rn=TOOL.anim=='run'?1:0;idle=1-mv;air=false}
  e.A.idle.setEffectiveWeight(idle);e.A.walk.setEffectiveWeight(mv-rn);e.A.run.setEffectiveWeight(rn);e.rn=rn;e.mv=mv;e.A.walk.timeScale=clamp(e.sp/3,.7,1.1);e.A.run.timeScale=clamp(e.sp/8.5,.65,1);
- for(let[bn,q]of e.base)bn.quaternion.copy(q);e.base.clear();e.mx.update(dt);
+ for(let[bn,q]of e.base)bn.quaternion.copy(q);e.base.clear();e.mx.update(dt);if(TOOL&&TOOL.anim=='bind'&&g===P.g){let r=e.d.rq||(e.d.rq=(()=>{let m={};e.d.src.traverse(o=>{if(o.isBone)m[o.name]=[o.quaternion.clone(),o.position.clone()]});return m})());for(let n in e.bo){let v=r[n];if(v){e.bo[n].quaternion.copy(v[0]);e.bo[n].position.copy(v[1])}}continue}
  if(e.d.gun)glbGun(e,u,dt,g===P.g?P.act:null);
  else{for(let n in e.rest)e.bo[n].quaternion.slerp(e.rest[n],.55*(1-(e.d.rh?mv:0)));g.updateMatrixWorld(true);glbBend(e,e.bo.Head,u.hd.rotation,1);if(!e.d.wr)glbBend(e,e.bo.LeftArm,u.arm.rotation,1);glbBend(e,e.bo.RightArm,u.off.rotation,air?1:idle);
   if(e.d.hl){GZ.set(...e.d.hl);glbBend(e,e.bo.LeftForeArm,GZ,1)}if(e.d.hr){GZ.set(...e.d.hr);glbBend(e,e.bo.RightForeArm,GZ,1)}
@@ -829,11 +831,13 @@ function fxHook(ev,x,y,z){if(!FXD.binds.length)return;let now=performance.now();
  if(now-(fxCD[i]||0)<fxN(b.cd,60,0,5000))continue;fxCD[i]=now;let at=b.at=='hero'&&P?{x:P.x,y:P.y+1,z:P.z}:{x,y,z};fxPlay(b.fx,at.x,at.y+fxN(b.dy,0,-3,6),at.z,{s:b.s})}}
 // rig.json: {heroes:{index:{h,lit,olw, grip,ws,palm,hl,hr,wrot,wpos, adj:{idle|walk|run|hold:{Bone:[x,y,z(deg),keep]}}, atk:{actionName:{Bone:[x,y,z]}}}}} merged over the built-in tuning
 const RIGB=['Hips','Spine','Spine01','Spine02','neck','Head','LeftShoulder','LeftArm','LeftForeArm','LeftHand','RightShoulder','RightArm','RightForeArm','RightHand','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot'];
-const rigV=(a,n)=>Array.isArray(a)?a.slice(0,n).map((v,i)=>fxN(v,i==3?1:0,-360,360)):null;
-function rigApply(){for(let i in RIGD.heroes){let r=RIGD.heroes[i],V=GLBV[i];if(!V||!r||typeof r!='object')continue;let o=V.opt[V.def];
+const rigV=(a,n)=>Array.isArray(a)?a.slice(0,n).map((v,i)=>i==3?fxN(v,1,0,2):fxN(v,0,-360,360)):null;
+function rigApply(){for(let i in GLBV){let V=GLBV[i],o=V.opt[V.def];// start every apply from the built-in tuning (kept in V._b), so presets and removed entries never pile up
+ if(!V._b)V._b={adj:o.adj,atk:o.atk,c:Object.assign({},V.common),h:o.h,lit:o.lit,olw:o.olw};let B=V._b;o.adj=B.adj;o.atk=B.atk;o.h=B.h;o.lit=B.lit;o.olw=B.olw;for(let k of['ws','palm','grip','hl','hr','wrot','wpos']){if(k in B.c)V.common[k]=B.c[k];else delete V.common[k]}
+ let r=RIGD.heroes[i];if(!r||typeof r!='object')continue;
  for(let k of['h','lit','olw'])if(Number.isFinite(r[k]))o[k]=r[k];for(let k of['ws','palm'])if(Number.isFinite(r[k]))V.common[k]=r[k];
  for(let k of['grip','hl','hr','wrot','wpos'])if(rigV(r[k],3))V.common[k]=rigV(r[k],3);
- if(r.adj&&typeof r.adj=='object'){o.adj=Object.assign({},o.adj);for(let c of['idle','walk','run','hold']){let a=r.adj[c];if(!a||typeof a!='object')continue;let m=Object.assign({},o.adj[c]);for(let b in a)if(RIGB.includes(b)){if(a[b]===null)delete m[b];else m[b]=rigV(a[b],4)}o.adj[c]=m}}
+ if(r.adj&&typeof r.adj=='object'){o.adj=Object.assign({},o.adj);for(let c of['idle','walk','run','hold']){let a=r.adj[c];if(!a||typeof a!='object')continue;let m=Object.assign({},o.adj[c]);for(let b in a)if(RIGB.includes(b)){if(a[b]===null)delete m[b];else m[b]=rigV(a[b],7)}o.adj[c]=m}}
  if(r.atk&&typeof r.atk=='object'){let A={};for(let a in r.atk)if(/^[a-z]{2,10}$/.test(a)&&r.atk[a]&&typeof r.atk[a]=='object'){A[a]={};for(let b in r.atk[a])if(RIGB.includes(b))A[a][b]=rigV(r.atk[a][b],3)}o.atk=A}}}
 // per-hero outline (width from rig olw) on the smoothed onorm hull
 function olsMat(d){let m=new THREE.MeshBasicMaterial({color:0x14121f,side:THREE.BackSide,skinning:true});d.olu={value:Number.isFinite(d.olw)?d.olw:.0085};m.onBeforeCompile=s=>{s.uniforms.olw=d.olu;s.vertexShader='attribute vec3 onorm;\nuniform float olw;\n'+s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed+=normalize(onorm)*olw;')};return m}

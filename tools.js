@@ -111,13 +111,51 @@ const BN=RIGB,CL=[['idle','ท่ายืน'],['walk','ท่าเดิน']
 const AL={light:'ตีปกติ',heavy:'ท่าหนัก',cast:'สกิล',air:'ตีกลางอากาศ',thrust:'ตีหลังแดช',charge:'ชาร์จ',spin:'หมุน',plunge:'กระแทกจากฟ้า',guard:'การ์ด',ult:'ไม้ตาย'};
 let rsel={clip:'run',bone:'LeftArm'};
 function rh(i){return D.rig.heroes[i]||(D.rig.heroes[i]={})}
-function rigPush(rebuild){const i=hero,d=GLBH[i],V=GLBV[i];RIGD=D.rig;rigApply();if(!d)return;Object.assign(d,V.common);
- if(d.ok){glbAdj(d.idleC,d.adj&&d.adj.idle);glbAdj(d.runC,d.adj&&d.adj.run);glbAdj(d.walkC,d.adj&&d.adj.walk);glbHold(d.walkC,d.runC,d.adj&&d.adj.hold);
-  if(d.mat)d.mat.color.setScalar(d.lit||1);if(d.olu)d.olu.value=Number.isFinite(d.olw)?d.olw:.0085;for(const e of GLBL)if(e.d===d)e.m.scale.setScalar(d.h/1.7)}
+function rigPush(rebuild){RIGD=D.rig;rigApply();
+ for(const i in GLBV){const d=GLBH[i],V=GLBV[i];if(!d)continue;for(const k of['ws','palm','grip','hl','hr','wrot','wpos'])if(!(k in V.common))delete d[k];Object.assign(d,V.common,{adj:V.opt[V.def].adj,atk:V.opt[V.def].atk,h:V.opt[V.def].h,lit:V.opt[V.def].lit,olw:V.opt[V.def].olw});
+  if(d.ok){glbAdj(d.idleC,d.adj&&d.adj.idle);glbAdj(d.runC,d.adj&&d.adj.run);glbAdj(d.walkC,d.adj&&d.adj.walk);glbHold(d.walkC,d.runC,d.adj&&d.adj.hold);
+   if(d.mat)d.mat.color.setScalar(d.lit||1);if(d.olu)d.olu.value=Number.isFinite(d.olw)?d.olw:.0085;for(const e of GLBL)if(e.d===d)e.m.scale.setScalar(d.h/1.7)}}
  if(rebuild){clearTimeout(rigPush.t);rigPush.t=setTimeout(rebuildHero,180)}draft('rig')}
+/* ---------- pose presets ----------
+   Written in body terms, per bone: [x,y,z, keep]. x = pitch (a bone pointing up leans forward, a hanging bone swings back), y = twist,
+   z = roll (a hanging left limb swings out to the side at +z, a right limb at -z). keep = how much of the clip's own swing stays (1 = as is).
+   Converted per hero from that hero's bind pose, so one preset fits every model. Spine, head, upper arms and upper legs swing in the parent
+   bone's frame (adj e[4..6]). Elbows (ForeArm) and knees (Leg) bend around their own joint: a forearm is [0,-bend,0] (SYM mirrors it), a knee is [bend,0,0]. */
+const SYM=(b,v)=>({['Left'+b]:v,['Right'+b]:[v[0],-v[1],-v[2],v[3]]}),EL=(bend,k)=>SYM('ForeArm',[0,-bend,0,k]);
+const PRE={
+ idle:[['ค่าเริ่มต้น',null],
+  ['กางแขน (A-pose)',{...SYM('Arm',[0,0,42,.25]),...EL(0,.25),Head:[-6,0,0]}],
+  ['ผ่อนคลาย',{Spine:[-3,0,0],Head:[-5,0,0],...SYM('Arm',[0,0,10,1]),...EL(12,1)}],
+  ['ตั้งการ์ด',{Spine:[10,18,0],Head:[-10,-14,0],LeftArm:[-45,0,15,.4],RightArm:[-35,0,-15,.4],...EL(60,.4),LeftUpLeg:[-12,0,8],RightUpLeg:[10,0,-8]}],
+  ['พร้อมลุย (ย่อตัว)',{Spine:[18,0,0],Head:[-16,0,0],...SYM('Arm',[-20,0,18,.7]),...EL(50,.7),...SYM('UpLeg',[-20,0,6]),...SYM('Leg',[30,0,0])}]],
+ run:[['ค่าเริ่มต้น',null],
+  ['วิ่งนินจา',{Spine:[28,0,0],Head:[-22,0,0],...SYM('Arm',[40,0,12,.15]),...EL(-15,.15)}],
+  ['สปรินต์',{Spine:[18,0,0],Head:[-14,0,0],...SYM('Arm',[0,0,8,1.35]),...EL(10,1.2)}],
+  ['วิ่งสบาย',{Spine:[4,0,0],Head:[-4,0,0],...SYM('Arm',[0,0,14,.6]),...EL(-10,.6)}],
+  ['วิ่งฮีโร่ (อกผาย)',{Spine:[-6,0,0],Head:[-8,0,0],...SYM('Arm',[0,0,16,1.2]),...EL(0,1.2)}]]};
+window.RIGTOOL={PRE,applyPreset:(...a)=>applyPreset(...a)};
+function bodyToParent(i,bone,b){const src=GLBH[i]&&GLBH[i].src;let bn=null;if(!src)return null;src.traverse(o=>{if(o.isBone&&o.name==bone)bn=o});if(!bn||!bn.parent)return null;src.updateMatrixWorld(true);
+ const root=src.getWorldQuaternion(new THREE.Quaternion()).invert(),Pq=root.multiply(bn.parent.getWorldQuaternion(new THREE.Quaternion())),Qb=new THREE.Quaternion().setFromEuler(new THREE.Euler(b[0]*DEG,b[1]*DEG,b[2]*DEG));
+ const l=Pq.clone().invert().multiply(Qb).multiply(Pq),e=new THREE.Euler().setFromQuaternion(l,'XYZ');return[e.x/DEG,e.y/DEG,e.z/DEG].map(v=>Math.round(v*10)/10)}
+function bodyToOwn(i,bone,b){const src=GLBH[i]&&GLBH[i].src;let bn=null;if(!src)return null;src.traverse(o=>{if(o.isBone&&o.name==bone)bn=o});if(!bn)return null;src.updateMatrixWorld(true);
+ const Bq=src.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(bn.getWorldQuaternion(new THREE.Quaternion())),Qb=new THREE.Quaternion().setFromEuler(new THREE.Euler(b[0]*DEG,b[1]*DEG,b[2]*DEG));
+ const l=Bq.clone().invert().multiply(Qb).multiply(Bq),e=new THREE.Euler().setFromQuaternion(l,'XYZ');return[e.x/DEG,e.y/DEG,e.z/DEG].map(v=>Math.round(v*10)/10)}
+function weaponBones(i){const V=GLBV[i],o=V&&V.opt[V.def],h=o&&o.adj&&o.adj.hold;const s=new Set(h?Object.keys(h):[]);if(s.has('LeftArm'))s.add('LeftHand');if(s.has('RightArm'))s.add('RightHand');return s}
+function applyPreset(clip,spec,all,keepWeapon){const ids=all?Object.keys(GLBV).map(Number):[hero];
+ for(const i of ids){const r=rh(i);r.adj=r.adj||{};if(!spec){delete r.adj[clip];continue}const m={},wb=clip=='run'&&keepWeapon?weaponBones(i):new Set();
+  for(const b in spec){if(wb.has(b))continue;const v=spec[b],k=v[3]===undefined?1:v[3];
+   // elbows, knees and hands bend around their own joint (post rotation in the bone's rest frame), so the bend reads the same whatever the arm is doing
+   if(/ForeArm|Leg$|Hand/.test(b)&&!/UpLeg/.test(b)){const p=bodyToOwn(i,b,v);if(p)m[b]=[...p,k];continue}
+   const p=bodyToParent(i,b,v);if(!p)continue;m[b]=[0,0,0,k,...p]}r.adj[clip]=m}
+ rigPush(true);TOOL.anim=clip;status('ใช้พรีเซ็ตแล้ว'+(all?' กับทุกตัว':'')+' · ปรับต่อทีละกระดูกได้ด้านล่าง')}
+function presetBox(){const all=h('input',{type:'checkbox'}),kw=h('input',{type:'checkbox',checked:true});
+ const row=clip=>h('div',{class:'row'},...PRE[clip].map(([n,s])=>h('button',{onclick:()=>{applyPreset(clip,s,all.checked,kw.checked);open('rig')}},n)));
+ return h('div',null,h('h3',null,'พรีเซ็ตท่า'),h('div',{class:'muted'},'ท่ายืน'),row('idle'),h('div',{class:'muted'},'ท่าวิ่ง'),row('run'),
+  h('div',{class:'row'},h('label',null,all,' ใช้กับทุกตัว')),h('div',{class:'row'},h('label',null,kw,' ไม่เปลี่ยนแขนที่ถืออาวุธตอนวิ่ง')),
+  h('div',{class:'muted'},'พรีเซ็ตแทนค่าท่านั้นทั้งหมด "ค่าเริ่มต้น" คืนเป็นท่าที่จูนไว้ในเกม'))}
 function rebuildHero(){if(!P||!P.g||mode!='play')return;const o=P.g,g=heroModel(hero);g.position.copy(o.position);g.rotation.copy(o.rotation);g.scale.copy(o.scale);sc.remove(o);sc.add(g);P.g=g}
 function curVal(){const d=GLBH[hero];if(!d)return[0,0,0,1];if(rsel.clip.startsWith('atk:')){const a=rsel.clip.slice(4),v=d.atk&&d.atk[a]&&d.atk[a][rsel.bone];return v?[...v,1]:[0,0,0,1]}
- const v=d.adj&&d.adj[rsel.clip]&&d.adj[rsel.clip][rsel.bone];return v?[v[0]||0,v[1]||0,v[2]||0,v[3]===undefined?1:v[3]]:[0,0,0,1]}
+ const v=d.adj&&d.adj[rsel.clip]&&d.adj[rsel.clip][rsel.bone];return v?[v[0]||0,v[1]||0,v[2]||0,v[3]===undefined?1:v[3],...v.slice(4)]:[0,0,0,1]}
 function setVal(v){const r=rh(hero);if(rsel.clip.startsWith('atk:')){const a=rsel.clip.slice(4);r.atk=r.atk||{};const d=GLBH[hero];r.atk[a]=Object.assign({},d&&d.atk&&d.atk[a],r.atk[a]);r.atk[a][rsel.bone]=v.slice(0,3)}
  else{r.adj=r.adj||{};r.adj[rsel.clip]=r.adj[rsel.clip]||{};r.adj[rsel.clip][rsel.bone]=v}rigPush(false)}
 function rigPanel(){panel.append(head('Rig Studio · จัดท่าตัวละคร'));const gl=Object.keys(GLBV).map(Number);
@@ -126,9 +164,9 @@ function rigPanel(){panel.append(head('Rig Studio · จัดท่าตัว
  panel.append(h('h3',null,'ตัวละคร (เฉพาะที่มีโมเดล 3D)'),h('div',{class:'row'},hs));
  if(!GLBV[hero]){panel.append(h('p',{class:'muted'},'ตัวนี้ยังไม่มีโมเดล 3D เลือกตัวในรายการด้านบน'),camBox(),saveRow('rig'));return}
  const d=GLBH[hero],r=rh(hero);
- panel.append(h('h3',null,'ดูท่า'),h('div',{class:'row'},...[['idle','ยืน'],['walk','เดิน'],['run','วิ่ง'],[null,'ตามเกม']].map(([k,n])=>h('button',{class:TOOL.anim==k?'on':'',onclick:e=>{TOOL.anim=k;e.target.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b==e.target))}},n))),
+ panel.append(h('h3',null,'ดูท่า'),h('div',{class:'row'},...[['bind','กางแขน (T-pose)'],['idle','ยืน'],['walk','เดิน'],['run','วิ่ง'],[null,'ตามเกม']].map(([k,n])=>h('button',{class:TOOL.anim==k?'on':'',onclick:e=>{TOOL.anim=k;e.target.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b==e.target))}},n))),
   h('div',{class:'row'},h('button',{onclick:()=>press('light')},'ตี'),h('button',{onclick:()=>press('heavy')},'ท่าหนัก'),h('button',{onclick:()=>press('e')},'สกิล E'),h('button',{onclick:()=>{press('jump');setTimeout(()=>press('light'),260)}},'ตีกลางอากาศ'),h('button',{onclick:()=>{press('dash');setTimeout(()=>press('light'),120)}},'แดช+ตี')),
-  h('div',{class:'muted'},'ชะลอเวลาได้ที่ "ความเร็วเวลา" ในหัวข้อกล้อง'));
+  h('div',{class:'muted'},'ชะลอเวลาได้ที่ "ความเร็วเวลา" ในหัวข้อกล้อง'),presetBox());
  // pose editor
  const cs=h('select',{onchange:e=>{rsel.clip=e.target.value;poseBox()}},CL.map(([v,n])=>h('option',{value:v,selected:rsel.clip==v},n)),h('optgroup',{label:'ท่าโจมตี (เติมเพิ่มระหว่างท่า)'},AT.map(a=>h('option',{value:'atk:'+a,selected:rsel.clip=='atk:'+a},AL[a]))));
  const bs=h('select',{onchange:e=>{rsel.bone=e.target.value;poseBox()}},BN.map(b=>h('option',{value:b,selected:rsel.bone==b},b)));
@@ -145,7 +183,7 @@ function rigPanel(){panel.append(head('Rig Studio · จัดท่าตัว
  panel.append(h('div',{class:'row'},h('button',{onclick:()=>{if(!confirm('ล้างค่าที่ปรับไว้ทั้งหมดของ '+HERO[hero].n+'? (กลับไปใช้ค่าในเกม)'))return;delete D.rig.heroes[hero];draft('rig');location.reload()}},'ล้างค่าตัวนี้')),camBox(),saveRow('rig'))}
 function poseBox(){const v=curVal(),atk=rsel.clip.startsWith('atk:'),box=ui.pose;box.replaceChildren();const nv=v.slice();
  ['x','y','z'].forEach((ax,j)=>box.append(slider('หมุน '+ax,nv[j],-180,180,1,x=>{nv[j]=x;setVal(atk?nv.slice(0,3):nv)})));
- if(!atk)box.append(slider('คงการแกว่ง',nv[3],0,1,.01,x=>{nv[3]=x;setVal(nv)}),h('div',{class:'muted'},'คงการแกว่ง 1 = แกว่งตามท่าเดิม, 0 = นิ่งที่ท่าเฉลี่ย'));
+ if(!atk)box.append(slider('คงการแกว่ง',nv[3],0,2,.01,x=>{nv[3]=x;setVal(nv)}),h('div',{class:'muted'},'คงการแกว่ง 1 = แกว่งตามท่าเดิม, 0 = นิ่งที่ท่าเฉลี่ย, มากกว่า 1 = แกว่งแรงขึ้น'));
  else box.append(h('div',{class:'muted'},'ค่านี้เติมเพิ่มระหว่างท่า มากสุดกลางท่า กดปุ่มท่าด้านบนเพื่อดู'));
  const d=GLBH[hero],used=atk?(d.atk&&d.atk[rsel.clip.slice(4)])||{}:(d.adj&&d.adj[rsel.clip])||{};const names=Object.keys(used).filter(b=>used[b]);
  box.append(h('div',{class:'row'},h('button',{onclick:()=>{const r=rh(hero);if(atk){r.atk=r.atk||{};const a=rsel.clip.slice(4);r.atk[a]=Object.assign({},used);delete r.atk[a][rsel.bone]}else{r.adj=r.adj||{};r.adj[rsel.clip]=r.adj[rsel.clip]||{};r.adj[rsel.clip][rsel.bone]=null}rigPush(false);poseBox()}},'คืนค่ากระดูกนี้')),
